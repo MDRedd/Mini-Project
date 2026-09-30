@@ -1,0 +1,6 @@
+{
+  "name": "Auto Timetable Generator",
+  "description": "An automated conflict-free weekly timetable scheduler for batches, faculties, and classrooms using a backtracking CSP solver and supporting drag-and-drop adjustments.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
