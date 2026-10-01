@@ -85,3 +85,108 @@ export interface ToastMessage {
   title: string;
   message: string;
 }
+
+export type UserRole = 'super_admin' | 'admin' | 'faculty' | 'student';
+
+export interface AdminPermissions {
+  canRunCspSolver: boolean;
+  canEditTimetableSlots: boolean;
+  canManageFaculty: boolean;
+  canManageCourses: boolean;
+  canManageRooms: boolean;
+  canManageCurriculum: boolean;
+  canManageBatches: boolean;
+  canClearGrids: boolean;
+  canExportReports: boolean;
+  canViewAnalytics: boolean;
+  canAssignFacultyMappings: boolean;
+}
+
+export interface UserAccount {
+  id: string;
+  name: string;
+  email: string;
+  role: UserRole;
+  department: string;
+  designation?: string;
+  avatar?: string;
+  pin?: string;
+  isActive: boolean;
+  createdAt: string;
+  lastLogin?: string;
+  customPermissions?: Partial<AdminPermissions>;
+}
+
+export interface AuditLogEntry {
+  id: string;
+  timestamp: string;
+  action: string;
+  userName: string;
+  userRole: UserRole;
+  details: string;
+  category: 'security' | 'schedule' | 'curriculum' | 'system' | 'override';
+  severity: 'info' | 'warning' | 'critical' | 'success';
+}
+
+export interface SystemPolicySettings {
+  institutionName: string;
+  departmentName: string;
+  academicYear: string;
+  emergencyFreezeTimetables: boolean;
+  strictAicteEnforcement: boolean;
+  allowAdminTimetableWipe: boolean;
+  requireSuperAdminApprovalForOverrides: boolean;
+  maxDailyFacultyHours: number;
+  enableAuditLogging: boolean;
+  autoBackupOnSolver: boolean;
+  adminPermissions: AdminPermissions;
+}
+
+export interface FacultyAvailability {
+  facultyId: string;
+  day: Day;
+  slotId?: SlotId;
+  status: 'AVAILABLE' | 'UNAVAILABLE' | 'LEAVE' | 'PREFERRED';
+  reason?: string;
+}
+
+export interface ElectiveGroup {
+  id: string;
+  name: string; // e.g., "Professional Elective I"
+  semester: number;
+  batchIds: string[]; // Batches sharing this elective band
+  courseIds: string[]; // Parallel elective courses (AI, Cloud, CyberSec)
+}
+
+export interface SolverDiagnostics {
+  unplacedCourses: {
+    batchId: string;
+    batchName: string;
+    courseId: string;
+    courseName: string;
+    required: number;
+    placed: number;
+    deficit: number;
+    reason: string;
+  }[];
+  hardViolations: string[];
+  facultySaturation: { facultyId: string; facultyName: string; assignedHours: number; maxAllowed: number }[];
+  roomUtilization: { roomId: string; roomNumber: string; occupiedSlots: number; capacityPct: number }[];
+}
+
+export interface SolverOptions {
+  enableSmartRelaxation?: boolean;
+  maxSessionDuration?: number;
+  allowThreeHourSessions?: boolean;
+  prioritizeMorningTheory?: boolean; // Heavy theory in Slots I-II, Labs/Activities in Slots III-VI
+  enableFacultyResearchDay?: boolean; // Ensure faculty get >=1 free day for research/prep
+  maxDailyHours?: number; // Configurable max daily teaching hours (default 4)
+  clearPrevious?: boolean;
+  maxIterations?: number; // Configurable search budget (e.g. 50,000)
+  maxExecutionTimeMs?: number; // Configurable time limit (e.g. 5,000 ms)
+  facultyAvailabilities?: FacultyAvailability[];
+  electiveGroups?: ElectiveGroup[];
+  require100PercentSatisfaction?: boolean;
+}
+
+

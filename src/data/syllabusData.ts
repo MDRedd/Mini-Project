@@ -135,7 +135,9 @@ export const SEMESTER_SYLLABUS_REGISTRY: Record<number, CourseDefinition[]> = {
     { code: 'BTCI4502', name: 'Comprehensive Technical Review', periodsPerWeek: 2, type: 'Theory' },
     { code: 'ACT-SEM', name: 'Technical Seminar', periodsPerWeek: 1, type: 'Activity' },
     { code: 'ACT-MENT', name: 'Mentoring', periodsPerWeek: 1, type: 'Activity' },
-    { code: 'ACT-LIB', name: 'Library', periodsPerWeek: 1, type: 'Activity' }
+    { code: 'ACT-LIB', name: 'Library', periodsPerWeek: 1, type: 'Activity' },
+    { code: 'ACT-TRAIN', name: 'Technical Training & Placement Prep', periodsPerWeek: 6, type: 'Activity' },
+    { code: 'ACT-PROJ-REV', name: 'Project Viva & Review', periodsPerWeek: 5, type: 'Activity' }
   ]
 };
 

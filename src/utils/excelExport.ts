@@ -46,7 +46,7 @@ export function exportTimetableToExcel({
   // --- SHEET 1: ACTIVE BATCH WEEKLY TIMETABLE MATRIX ---
   const sheet1Data: any[][] = [];
 
-  sheet1Data.push(['SCHOOL OF TECHNOLOGY - DEPARTMENT OF COMPUTER SCIENCE & ENGINEERING']);
+  sheet1Data.push(['TIMEPRO — TIMETABLE MANAGEMENT SYSTEM']);
   sheet1Data.push([`ACADEMIC CLASS TIMETABLE — SEMESTER ${semesterNum} (${batchName.toUpperCase()})`]);
   sheet1Data.push([`Generated On: ${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}`]);
   

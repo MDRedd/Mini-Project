@@ -354,24 +354,24 @@ export default function ConflictResolutionAssistant({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in print:hidden">
-      <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-fade-in print:hidden">
+      <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden text-[#0F172A]">
         {/* Header */}
-        <div className="p-5 sm:p-6 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-blue-50/60 via-indigo-50/40 to-white">
+        <div className="p-5 sm:p-6 border-b border-slate-200 flex items-center justify-between bg-slate-50">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-indigo-600 flex items-center justify-center text-white shadow-md shadow-indigo-500/20">
+            <div className="w-10 h-10 rounded-2xl bg-indigo-50 border border-indigo-200 flex items-center justify-center text-[#4F46E5] shadow-xs font-black">
               <ArrowLeftRight className="w-5 h-5" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-base font-black text-slate-900 tracking-tight">
+                <h2 className="text-base font-black text-[#0F172A] tracking-tight font-cinzel-title">
                   Interactive Drag-and-Swap Conflict Assistant
                 </h2>
-                <span className="text-[10px] bg-indigo-100 text-indigo-800 font-extrabold px-2 py-0.5 rounded-full font-mono">
+                <span className="text-[10px] bg-indigo-50 text-[#4F46E5] border border-indigo-200 font-extrabold px-2 py-0.5 rounded-full font-mono">
                   {sourceBatch?.name || 'Active Section'}
                 </span>
               </div>
-              <p className="text-xs text-slate-500 font-medium mt-0.5">
+              <p className="text-xs text-[#64748B] font-medium mt-0.5">
                 Simulate period relocations & mutual swaps with real-time faculty, room, and section conflict audits.
               </p>
             </div>
@@ -379,16 +379,16 @@ export default function ConflictResolutionAssistant({
 
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 hover:text-slate-800 transition-colors cursor-pointer"
+            className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 hover:text-[#0F172A] transition-colors cursor-pointer border border-slate-200"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Period Selector Strip */}
-        <div className="p-4 sm:p-5 border-b border-slate-100 bg-slate-50/70 space-y-3">
-          <label className="text-[11px] font-extrabold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
-            <Calendar className="w-3.5 h-3.5 text-indigo-600" />
+        <div className="p-4 sm:p-5 border-b border-slate-200 bg-slate-50/50 space-y-3">
+          <label className="text-[11px] font-extrabold uppercase tracking-wider text-[#64748B] flex items-center gap-1.5">
+            <Calendar className="w-3.5 h-3.5 text-[#4F46E5]" />
             Select Scheduled Period to Move or Swap:
           </label>
 
@@ -402,12 +402,12 @@ export default function ConflictResolutionAssistant({
                   onClick={() => setSelectedEntryId(entry.id)}
                   className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer border ${
                     isSelected
-                      ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
-                      : 'bg-white hover:bg-slate-100 text-slate-700 border-slate-200'
+                      ? 'bg-[#4F46E5] text-white border-[#4F46E5] font-black shadow-xs'
+                      : 'bg-white hover:bg-slate-100 text-[#334155] border-slate-200'
                   }`}
                 >
                   <span className={`px-1.5 py-0.2 rounded text-[10px] font-mono font-black ${
-                    isSelected ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-700'
+                    isSelected ? 'bg-white/20 text-white' : 'bg-slate-100 text-[#64748B]'
                   }`}>
                     {entry.day.substring(0, 3)} {entry.slotId}
                   </span>
@@ -419,21 +419,21 @@ export default function ConflictResolutionAssistant({
 
           {/* Active Period Details Card */}
           {sourceEntry && sourceCourse && (
-            <div className="bg-white border border-slate-200/90 rounded-2xl p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
+            <div className="bg-white border border-slate-200 rounded-2xl p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-indigo-50 border border-indigo-200/80 flex items-center justify-center font-mono font-extrabold text-xs text-indigo-700">
+                <div className="w-9 h-9 rounded-xl bg-indigo-50 border border-indigo-200 flex items-center justify-center font-mono font-extrabold text-xs text-[#4F46E5]">
                   {sourceEntry.slotId}
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="font-mono font-black text-xs text-indigo-700">{sourceCourse.courseCode}</span>
-                    <span className="font-black text-xs text-slate-900">{sourceCourse.name}</span>
-                    <span className="text-[10px] px-2 py-0.2 rounded-full font-bold bg-slate-100 text-slate-600 font-mono">
+                    <span className="font-mono font-black text-xs text-[#4F46E5]">{sourceCourse.courseCode}</span>
+                    <span className="font-black text-xs text-[#0F172A]">{sourceCourse.name}</span>
+                    <span className="text-[10px] px-2 py-0.2 rounded-full font-bold bg-slate-100 text-[#475569] font-mono border border-slate-200">
                       {sourceEntry.colSpan || sourceCourse.durationSlots || 1}h {sourceCourse.type}
                     </span>
                   </div>
-                  <div className="text-[11px] text-slate-500 font-medium flex items-center gap-3 mt-0.5">
-                    <span className="flex items-center gap-1 font-semibold text-slate-700">
+                  <div className="text-[11px] text-[#64748B] font-medium flex items-center gap-3 mt-0.5">
+                    <span className="flex items-center gap-1 font-semibold text-[#0F172A]">
                       <User className="w-3 h-3 text-slate-400" />
                       {sourceFaculty?.name || 'Instructor'}
                     </span>
@@ -443,13 +443,13 @@ export default function ConflictResolutionAssistant({
                       {sourceRoom?.roomNumber || 'Room'}
                     </span>
                     <span>•</span>
-                    <span className="font-bold text-slate-800">Currently: {sourceEntry.day} Slot {sourceEntry.slotId}</span>
+                    <span className="font-bold text-[#4F46E5]">Currently: {sourceEntry.day} Slot {sourceEntry.slotId}</span>
                   </div>
                 </div>
               </div>
 
               <div className="text-right">
-                <span className="text-[10px] uppercase font-mono font-extrabold text-emerald-700 bg-emerald-50 border border-emerald-200/70 px-2.5 py-1 rounded-lg inline-flex items-center gap-1">
+                <span className="text-[10px] uppercase font-mono font-extrabold text-[#047857] bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-lg inline-flex items-center gap-1">
                   <Sparkles className="w-3 h-3" /> Ready for Real-Time Analysis
                 </span>
               </div>
@@ -458,12 +458,12 @@ export default function ConflictResolutionAssistant({
         </div>
 
         {/* Filter & Candidate Search Toolbar */}
-        <div className="p-4 border-b border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200/80 text-xs w-full sm:w-auto">
+        <div className="p-4 border-b border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 bg-white">
+          <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs w-full sm:w-auto">
             <button
               onClick={() => setFilterType('all')}
               className={`px-3 py-1 rounded-lg font-bold transition-all cursor-pointer ${
-                filterType === 'all' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                filterType === 'all' ? 'bg-white text-[#0F172A] shadow-xs border border-slate-200' : 'text-[#64748B] hover:text-[#0F172A]'
               }`}
             >
               All Slots ({candidates.length})
@@ -471,16 +471,16 @@ export default function ConflictResolutionAssistant({
             <button
               onClick={() => setFilterType('safe_only')}
               className={`px-3 py-1 rounded-lg font-bold transition-all cursor-pointer flex items-center gap-1 ${
-                filterType === 'safe_only' ? 'bg-white text-emerald-700 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                filterType === 'safe_only' ? 'bg-emerald-50 text-[#047857] shadow-xs border border-emerald-200' : 'text-[#64748B] hover:text-[#0F172A]'
               }`}
             >
-              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+              <CheckCircle2 className="w-3.5 h-3.5 text-[#10B981]" />
               <span>Safe Swaps & Moves ({candidates.filter(c => c.safetyStatus === 'SAFE_MOVE' || c.safetyStatus === 'SAFE_SWAP').length})</span>
             </button>
             <button
               onClick={() => setFilterType('swaps_only')}
               className={`px-3 py-1 rounded-lg font-bold transition-all cursor-pointer ${
-                filterType === 'swaps_only' ? 'bg-white text-blue-700 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                filterType === 'swaps_only' ? 'bg-blue-50 text-[#1D4ED8] shadow-xs border border-blue-200' : 'text-[#64748B] hover:text-[#0F172A]'
               }`}
             >
               Mutual Swaps
@@ -488,7 +488,7 @@ export default function ConflictResolutionAssistant({
             <button
               onClick={() => setFilterType('moves_only')}
               className={`px-3 py-1 rounded-lg font-bold transition-all cursor-pointer ${
-                filterType === 'moves_only' ? 'bg-white text-indigo-700 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                filterType === 'moves_only' ? 'bg-purple-50 text-[#6D28D9] shadow-xs border border-purple-200' : 'text-[#64748B] hover:text-[#0F172A]'
               }`}
             >
               Vacant Moves
@@ -502,15 +502,15 @@ export default function ConflictResolutionAssistant({
               placeholder="Search day or slot..."
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-8 pr-3 py-1.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-8 pr-3 py-1.5 text-xs text-[#0F172A] placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#4F46E5]"
             />
           </div>
         </div>
 
         {/* Candidate Slots List */}
-        <div className="p-4 sm:p-5 overflow-y-auto flex-1 space-y-2.5 custom-scrollbar">
+        <div className="p-4 sm:p-5 overflow-y-auto flex-1 space-y-2.5 custom-scrollbar bg-slate-50/40">
           {filteredCandidates.length === 0 ? (
-            <div className="p-8 text-center text-slate-400 text-xs">
+            <div className="p-8 text-center text-[#64748B] text-xs">
               No slots match the selected criteria.
             </div>
           ) : (
@@ -525,19 +525,19 @@ export default function ConflictResolutionAssistant({
                   key={`${cand.day}-${cand.slotId}-${idx}`}
                   className={`p-3.5 rounded-2xl border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
                     isSafe
-                      ? 'bg-white border-slate-200 hover:border-indigo-300 shadow-2xs'
+                      ? 'bg-white border-slate-200 hover:border-[#4F46E5]/40 shadow-xs'
                       : isBlocked
-                      ? 'bg-slate-50/70 border-slate-200/60 opacity-80'
-                      : 'bg-amber-50/40 border-amber-200/80'
+                      ? 'bg-slate-100/70 border-slate-200 opacity-60'
+                      : 'bg-amber-50/50 border-amber-200'
                   }`}
                 >
                   {/* Slot & Target Class Info */}
                   <div className="flex items-start sm:items-center gap-3">
                     <div className={`w-11 h-11 rounded-2xl flex flex-col items-center justify-center font-mono font-black text-xs shrink-0 border ${
                       isMutualSwap
-                        ? 'bg-blue-50 border-blue-200 text-blue-700'
+                        ? 'bg-blue-50 border-blue-200 text-[#1D4ED8]'
                         : isVacantMove
-                        ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                        ? 'bg-emerald-50 border-emerald-200 text-[#047857]'
                         : 'bg-slate-100 border-slate-200 text-slate-500'
                     }`}>
                       <span className="text-[9px] uppercase leading-none font-bold">{cand.day.substring(0, 3)}</span>
@@ -546,46 +546,46 @@ export default function ConflictResolutionAssistant({
 
                     <div className="space-y-1">
                       <div className="flex items-center flex-wrap gap-2">
-                        <span className="font-black text-xs text-slate-900">
+                        <span className="font-black text-xs text-[#0F172A]">
                           {cand.day} Slot {cand.slotId}
                         </span>
 
                         {isMutualSwap && (
-                          <span className="text-[10px] bg-blue-100/80 text-blue-800 font-extrabold px-2 py-0.2 rounded-full border border-blue-200 flex items-center gap-1 font-mono">
+                          <span className="text-[10px] bg-blue-50 text-[#1D4ED8] font-extrabold px-2 py-0.2 rounded-full border border-blue-200 flex items-center gap-1 font-mono">
                             <ArrowLeftRight className="w-3 h-3" /> Safe Mutual Swap
                           </span>
                         )}
 
                         {isVacantMove && (
-                          <span className="text-[10px] bg-emerald-100/80 text-emerald-800 font-extrabold px-2 py-0.2 rounded-full border border-emerald-200 flex items-center gap-1 font-mono">
+                          <span className="text-[10px] bg-emerald-50 text-[#047857] font-extrabold px-2 py-0.2 rounded-full border border-emerald-200 flex items-center gap-1 font-mono">
                             <CheckCircle2 className="w-3 h-3" /> Safe Vacant Move
                           </span>
                         )}
 
                         {isBlocked && (
-                          <span className="text-[10px] bg-rose-50 text-rose-700 font-bold px-2 py-0.2 rounded-full border border-rose-200/80 flex items-center gap-1">
+                          <span className="text-[10px] bg-rose-50 text-[#DC2626] font-bold px-2 py-0.2 rounded-full border border-rose-200 flex items-center gap-1">
                             <XCircle className="w-3 h-3" /> Clashing Slot
                           </span>
                         )}
 
                         {cand.targetCourse && (
-                          <span className="text-[11px] font-bold text-slate-700 bg-slate-100 px-2 py-0.2 rounded-md">
-                            Currently: <span className="font-mono text-indigo-700 font-black">{cand.targetCourse.courseCode}</span> ({cand.targetCourse.name})
+                          <span className="text-[11px] font-bold text-[#334155] bg-slate-100 border border-slate-200 px-2 py-0.2 rounded-md">
+                            Currently: <span className="font-mono text-[#4F46E5] font-black">{cand.targetCourse.courseCode}</span> ({cand.targetCourse.name})
                           </span>
                         )}
                       </div>
 
                       <p className={`text-xs ${
-                        isSafe ? 'text-slate-600 font-medium' : isBlocked ? 'text-rose-700 font-semibold' : 'text-amber-800 font-medium'
+                        isSafe ? 'text-[#64748B] font-medium' : isBlocked ? 'text-[#DC2626] font-semibold' : 'text-[#D97706] font-medium'
                       }`}>
                         {cand.primaryReason}
                       </p>
 
                       {cand.targetFaculty && (
-                        <div className="text-[10px] text-slate-500 flex items-center gap-2">
-                          <span>Target Instructor: <strong className="text-slate-700">{cand.targetFaculty.name}</strong></span>
+                        <div className="text-[10px] text-[#64748B] flex items-center gap-2">
+                          <span>Target Instructor: <strong className="text-[#0F172A]">{cand.targetFaculty.name}</strong></span>
                           <span>•</span>
-                          <span>Target Room: <strong className="text-slate-700">{cand.targetRoom?.roomNumber}</strong></span>
+                          <span>Target Room: <strong className="text-[#0F172A]">{cand.targetRoom?.roomNumber}</strong></span>
                         </div>
                       )}
                     </div>
@@ -598,12 +598,12 @@ export default function ConflictResolutionAssistant({
                       disabled={isBlocked}
                       className={`px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 ${
                         isMutualSwap
-                          ? 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white shadow-xs'
+                          ? 'bg-[#3B82F6] hover:bg-[#2563EB] text-white shadow-xs'
                           : isVacantMove
-                          ? 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-xs'
+                          ? 'bg-[#10B981] hover:bg-[#059669] text-white shadow-xs'
                           : isBlocked
-                          ? 'bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200/60'
-                          : 'bg-amber-600 text-white hover:bg-amber-500'
+                          ? 'bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200'
+                          : 'bg-[#D4A72C] text-white hover:bg-[#B88E1F] font-black'
                       }`}
                     >
                       {isMutualSwap ? (
@@ -628,19 +628,19 @@ export default function ConflictResolutionAssistant({
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500 bg-slate-50/50">
+        <div className="p-4 border-t border-slate-200 flex items-center justify-between text-xs text-[#64748B] bg-slate-50">
           <div className="flex items-center gap-4">
-            <span className="flex items-center gap-1 text-emerald-700 font-bold">
-              <CheckCircle2 className="w-3.5 h-3.5" /> 100% Conflict Free
+            <span className="flex items-center gap-1 text-[#047857] font-bold">
+              <CheckCircle2 className="w-3.5 h-3.5 text-[#10B981]" /> 100% Conflict Free
             </span>
-            <span className="flex items-center gap-1 text-slate-500 font-medium">
-              <ShieldCheck className="w-3.5 h-3.5 text-indigo-600" /> Preserves all 24 Institutional Constraints
+            <span className="flex items-center gap-1 text-[#64748B] font-medium">
+              <ShieldCheck className="w-3.5 h-3.5 text-[#4F46E5]" /> Preserves all 24 Institutional Constraints
             </span>
           </div>
 
           <button
             onClick={onClose}
-            className="px-4 py-1.5 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-100 font-bold transition-all cursor-pointer"
+            className="px-4 py-1.5 rounded-xl border border-slate-300 bg-white text-[#0F172A] hover:bg-slate-100 font-bold transition-all cursor-pointer"
           >
             Cancel
           </button>

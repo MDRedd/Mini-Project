@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Plus, Trash2, GraduationCap, Users, BookOpen, Warehouse, Shuffle, RefreshCw, ArrowUpRight, Download, Upload, X, Check, BarChart2, FileText, Search, Pin, Loader2, AlertTriangle, Edit2, Sparkles, Zap, RotateCcw } from 'lucide-react';
-import { Batch, Faculty, Course, Room, FacultyCourseMapping, SemesterCourseMap, TimetableEntry } from '../types';
+import { Plus, Trash2, GraduationCap, Users, BookOpen, Warehouse, Shuffle, RefreshCw, ArrowUpRight, Download, Upload, X, Check, BarChart2, FileText, Search, Pin, Loader2, AlertTriangle, Edit2, Sparkles, Zap, RotateCcw, Lock } from 'lucide-react';
+import { Batch, Faculty, Course, Room, FacultyCourseMapping, SemesterCourseMap, TimetableEntry, AdminPermissions } from '../types';
 import { DEFAULT_SEM_COURSES, DEFAULT_FACULTY_MAPPINGS } from '../data/initialData';
 import { detectSemesterFromBatch } from '../data/syllabusData';
 import FacultyLoadDashboard from './FacultyLoadDashboard';
@@ -29,6 +29,9 @@ interface AdminPanelProps {
   onToggleSmartFill?: (enabled: boolean) => void;
   activeTab?: AdminTab;
   onTabChange?: (tab: AdminTab) => void;
+  isSuperAdmin?: boolean;
+  isFrozen?: boolean;
+  adminPermissions?: AdminPermissions;
 }
 
 export type AdminTab = 'batches' | 'faculty' | 'courses' | 'rooms' | 'mappings' | 'curriculum' | 'dashboard' | 'docs' | 'parallel-diagnostics';
@@ -53,12 +56,30 @@ export default function AdminPanel({
   onToggleSmartFill,
   activeTab: controlledActiveTab,
   onTabChange,
+  isSuperAdmin = false,
+  isFrozen = false,
+  adminPermissions,
 }: AdminPanelProps) {
-  const [internalActiveTab, setInternalActiveTab] = useState<AdminTab>('batches');
-  const activeTab = controlledActiveTab !== undefined ? controlledActiveTab : internalActiveTab;
+  // Super Admin granular permission checks for Admin role
+  const canManageBatches = isSuperAdmin || (adminPermissions ? adminPermissions.canManageBatches : true);
+  const canManageFaculty = isSuperAdmin || (adminPermissions ? adminPermissions.canManageFaculty : true);
+  const canManageCourses = isSuperAdmin || (adminPermissions ? adminPermissions.canManageCourses : true);
+  const canManageRooms = isSuperAdmin || (adminPermissions ? adminPermissions.canManageRooms : true);
+  const canManageCurriculum = isSuperAdmin || (adminPermissions ? adminPermissions.canManageCurriculum : true);
+  const canAssignFacultyMappings = isSuperAdmin || (adminPermissions ? adminPermissions.canAssignFacultyMappings : true);
+  const canRunCspSolver = isSuperAdmin || (adminPermissions ? adminPermissions.canRunCspSolver : true);
+  const [internalActiveTab, setInternalActiveTab] = useState<AdminTab>(controlledActiveTab || 'batches');
+
+  React.useEffect(() => {
+    if (controlledActiveTab) {
+      setInternalActiveTab(controlledActiveTab);
+    }
+  }, [controlledActiveTab]);
+
+  const activeTab = internalActiveTab;
   const setActiveTab = (tab: AdminTab) => {
-    if (onTabChange) onTabChange(tab);
     setInternalActiveTab(tab);
+    if (onTabChange) onTabChange(tab);
   };
   const [isBackupModalOpen, setIsBackupModalOpen] = useState<boolean>(false);
   const [selectedSemesterPlanner, setSelectedSemesterPlanner] = useState<number>(1);
@@ -165,6 +186,9 @@ export default function AdminPanel({
 
   // Input states for adding new items
   const [newBatch, setNewBatch] = useState({ name: '', yearOfJoining: 2026, semester: 1 });
+  const [showAddBatchForm, setShowAddBatchForm] = useState<boolean>(false);
+  const [batchSearchQuery, setBatchSearchQuery] = useState<string>('');
+  const [batchSemesterFilter, setBatchSemesterFilter] = useState<string>('all');
   const [newFaculty, setNewFaculty] = useState<{
     name: string;
     phone: string;
@@ -206,9 +230,23 @@ export default function AdminPanel({
   const [newRoom, setNewRoom] = useState({ roomNumber: '', type: 'Theory' as Room['type'], capacity: 60 });
   const [newMapping, setNewMapping] = useState({ facultyId: '', courseId: '' });
 
+  // Search & Filter states for sub-tabs
+  const [courseSearchQuery, setCourseSearchQuery] = useState<string>('');
+  const [courseTypeFilter, setCourseTypeFilter] = useState<string>('all');
+  const [roomSearchQuery, setRoomSearchQuery] = useState<string>('');
+  const [roomTypeFilter, setRoomTypeFilter] = useState<string>('all');
+  const [mappingSearchQuery, setMappingSearchQuery] = useState<string>('');
+  const [mappingDeptFilter, setMappingDeptFilter] = useState<string>('all');
+  const [facultySearchQuery, setFacultySearchQuery] = useState<string>('');
+  const [facultyDeptFilter, setFacultyDeptFilter] = useState<string>('all');
+
   // 1. Batch Management Action Handlers
   const handleAddBatch = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!canManageBatches) {
+      onShowToast('error', 'Action Restricted', 'Batch creation is restricted for Admins by Super Admin policy.');
+      return;
+    }
     if (!newBatch.name.trim()) return;
 
     // Check duplicate
@@ -236,6 +274,10 @@ export default function AdminPanel({
   };
 
   const handleDeleteBatch = (id: string, name: string) => {
+    if (!canManageBatches) {
+      onShowToast('error', 'Action Restricted', 'Batch removal is restricted for Admins by Super Admin policy.');
+      return;
+    }
     // Prevent delete if classes scheduled
     const hasSchedules = entries.some(e => e.batchId === id);
     if (hasSchedules) {
@@ -247,6 +289,10 @@ export default function AdminPanel({
   };
 
   const handlePromoteBatch = (id: string) => {
+    if (!canManageBatches) {
+      onShowToast('error', 'Action Restricted', 'Batch promotions are restricted for Admins by Super Admin policy.');
+      return;
+    }
     const batch = batches.find(b => b.id === id);
     if (!batch) return;
 
@@ -268,6 +314,10 @@ export default function AdminPanel({
   };
 
   const handlePromoteMultiple = () => {
+    if (!canManageBatches) {
+      onShowToast('error', 'Action Restricted', 'Batch promotions are restricted for Admins by Super Admin policy.');
+      return;
+    }
     if (selectedBatchIds.length === 0) return;
     const activeQueue = [...selectedBatchIds];
     const firstId = activeQueue.shift();
@@ -293,6 +343,10 @@ export default function AdminPanel({
   };
 
   const handleConfirmPromotion = () => {
+    if (!canManageBatches) {
+      onShowToast('error', 'Action Restricted', 'Batch promotions are restricted for Admins by Super Admin policy.');
+      return;
+    }
     if (!promotingBatch) return;
 
     const nextSem = promotingBatch.semester + 1;
@@ -425,6 +479,10 @@ export default function AdminPanel({
   };
 
   const handleCloneBatchTemplate = (sourceId: string) => {
+    if (!canManageBatches) {
+      onShowToast('error', 'Action Restricted', 'Cloning batches is restricted for Admins by Super Admin policy.');
+      return;
+    }
     const sourceBatch = batches.find(b => b.id === sourceId);
     if (!sourceBatch) return;
 
@@ -470,6 +528,10 @@ export default function AdminPanel({
   // 2. Faculty Management
   const handleAddFaculty = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!canManageFaculty) {
+      onShowToast('error', 'Action Restricted', 'Faculty recruitment is restricted for Admins by Super Admin policy.');
+      return;
+    }
     if (!newFaculty.name.trim()) return;
 
     const created: Faculty = {
@@ -524,6 +586,10 @@ export default function AdminPanel({
 
   const handleSaveEditFaculty = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!canManageFaculty) {
+      onShowToast('error', 'Action Restricted', 'Faculty modifications are restricted for Admins by Super Admin policy.');
+      return;
+    }
     if (!editingFaculty) return;
     if (!editFacultyForm.name.trim()) return;
 
@@ -556,6 +622,10 @@ export default function AdminPanel({
   };
 
   const handleDeleteFaculty = (id: string, name: string) => {
+    if (!canManageFaculty) {
+      onShowToast('error', 'Action Restricted', 'Faculty retirement is restricted for Admins by Super Admin policy.');
+      return;
+    }
     if (entries.some(e => e.facultyId === id)) {
       onShowToast('error', 'Instructor Active', `Cannot delete ${name}: currently scheduled to teach active classes.`);
       return;
@@ -568,6 +638,10 @@ export default function AdminPanel({
   // 3. Course Management
   const handleAddCourse = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!canManageCourses) {
+      onShowToast('error', 'Action Restricted', 'Course syllabus additions are restricted for Admins by Super Admin policy.');
+      return;
+    }
     if (!newCourse.courseCode.trim() || !newCourse.name.trim()) return;
 
     const created: Course = {
@@ -585,6 +659,10 @@ export default function AdminPanel({
   };
 
   const handleDeleteCourse = (id: string, name: string) => {
+    if (!canManageCourses) {
+      onShowToast('error', 'Action Restricted', 'Course deletion is restricted for Admins by Super Admin policy.');
+      return;
+    }
     if (entries.some(e => e.courseId === id)) {
       onShowToast('error', 'Course Active', `Cannot delete ${name}: currently scheduled in active timetables.`);
       return;
@@ -596,6 +674,10 @@ export default function AdminPanel({
   // 4. Room Management
   const handleAddRoom = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!canManageRooms) {
+      onShowToast('error', 'Action Restricted', 'Room creation is restricted for Admins by Super Admin policy.');
+      return;
+    }
     if (!newRoom.roomNumber.trim()) return;
 
     const created: Room = {
@@ -611,6 +693,10 @@ export default function AdminPanel({
   };
 
   const handleDeleteRoom = (id: string, roomNumber: string) => {
+    if (!canManageRooms) {
+      onShowToast('error', 'Action Restricted', 'Room deletion is restricted for Admins by Super Admin policy.');
+      return;
+    }
     if (entries.some(e => e.roomId === id)) {
       onShowToast('error', 'Room Occupied', `Cannot delete Room ${roomNumber}: active classes are physically assigned here.`);
       return;
@@ -622,6 +708,10 @@ export default function AdminPanel({
   // 5. Faculty Course Mapping Management
   const handleAddMapping = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!canAssignFacultyMappings) {
+      onShowToast('error', 'Action Restricted', 'Faculty-course assignments are restricted for Admins by Super Admin policy.');
+      return;
+    }
     if (!newMapping.facultyId || !newMapping.courseId) return;
 
     // Check duplicate mapping
@@ -642,11 +732,19 @@ export default function AdminPanel({
   };
 
   const handleDeleteMapping = (id: string) => {
+    if (!canAssignFacultyMappings) {
+      onShowToast('error', 'Action Restricted', 'Faculty-course mapping removal is restricted for Admins by Super Admin policy.');
+      return;
+    }
     onUpdateMappings(mappings.filter(m => m.id !== id));
     onShowToast('info', 'Mapping Deleted', 'Removed instructor subject mapping.');
   };
 
   const handleResetToStandardSyllabus = () => {
+    if (!canManageCurriculum) {
+      onShowToast('error', 'Action Restricted', 'Curriculum syllabus reset is restricted for Admins by Super Admin policy.');
+      return;
+    }
     const standardIds = DEFAULT_SEM_COURSES[selectedSemesterPlanner] || [];
     if (standardIds.length === 0) {
       onShowToast('warning', 'No Preset Found', `No default syllabus found for Semester ${selectedSemesterPlanner}.`);
@@ -693,6 +791,10 @@ export default function AdminPanel({
   };
 
   const handleAddCourseToSemesterPlanner = (courseId: string) => {
+    if (!canManageCurriculum) {
+      onShowToast('error', 'Action Restricted', 'Adding courses to semester curriculum is restricted for Admins by Super Admin policy.');
+      return;
+    }
     const batchesInSem = batches.filter(b => b.semester === selectedSemesterPlanner);
     
     // Check if it's already mapped
@@ -735,6 +837,10 @@ export default function AdminPanel({
   };
 
   const handleRemoveCourseFromSemesterPlanner = (courseId: string) => {
+    if (!canManageCurriculum) {
+      onShowToast('error', 'Action Restricted', 'Removing courses from semester curriculum is restricted for Admins by Super Admin policy.');
+      return;
+    }
     const updated = semesterCourseMaps.filter(
       m => !(m.semester === selectedSemesterPlanner && m.courseId === courseId)
     );
@@ -743,6 +849,10 @@ export default function AdminPanel({
   };
 
   const handleAssignFacultyPlanner = (courseId: string, facultyId: string) => {
+    if (!canAssignFacultyMappings) {
+      onShowToast('error', 'Action Restricted', 'Faculty assignments are restricted for Admins by Super Admin policy.');
+      return;
+    }
     const existingIdx = mappings.findIndex(m => m.courseId === courseId);
     let updatedMappings = [...mappings];
     
@@ -776,58 +886,58 @@ export default function AdminPanel({
   };
 
   return (
-    <div className="bg-white/95 backdrop-blur-md border border-slate-200/90 rounded-3xl shadow-sm overflow-hidden mb-8">
+    <div className="bg-white border border-slate-200/90 rounded-3xl shadow-sm overflow-hidden mb-8 text-slate-900">
       {/* Tab Navigation Headers */}
-      <div className="border-b border-slate-200/80 bg-slate-50/70 flex flex-col xl:flex-row justify-between items-stretch xl:items-center gap-3 p-3 sm:p-4">
-        <div className="flex flex-wrap items-center bg-slate-100/90 p-1 rounded-2xl border border-slate-200/80 gap-0.5">
+      <div className="border-b border-slate-200 bg-slate-50/80 flex flex-col xl:flex-row justify-between items-stretch xl:items-center gap-3 p-3 sm:p-4">
+        <div className="flex flex-wrap items-center bg-white p-1 rounded-2xl border border-slate-200 gap-0.5 shadow-2xs">
           <button
             onClick={() => setActiveTab('batches')}
-            className={`relative flex items-center gap-2 text-xs font-extrabold px-3.5 py-2 rounded-xl transition-colors cursor-pointer ${
-              activeTab === 'batches' ? 'text-slate-900' : 'text-slate-500 hover:text-slate-800'
+            className={`relative flex items-center gap-2 text-xs font-black px-3.5 py-2 rounded-xl transition-colors cursor-pointer ${
+              activeTab === 'batches' ? 'text-[#0F172A]' : 'text-slate-500 hover:text-slate-900'
             }`}
           >
             {activeTab === 'batches' && (
               <motion.div
                 layoutId="adminTabIndicator"
-                className="absolute inset-0 bg-white rounded-xl shadow-xs border border-slate-200/60"
+                className="absolute inset-0 bg-[#F1F5F9] rounded-xl shadow-2xs border border-slate-200"
                 transition={{ type: 'spring', damping: 25, stiffness: 350 }}
               />
             )}
             <span className="relative z-10 flex items-center gap-2">
-              <GraduationCap className="w-4 h-4 text-indigo-600" />
+              <GraduationCap className="w-4 h-4 text-amber-500" />
               Batches & Promotion
             </span>
           </button>
    
           <button
             onClick={() => setActiveTab('faculty')}
-            className={`relative flex items-center gap-2 text-xs font-extrabold px-3.5 py-2 rounded-xl transition-colors cursor-pointer ${
-              activeTab === 'faculty' ? 'text-slate-900' : 'text-slate-500 hover:text-slate-800'
+            className={`relative flex items-center gap-2 text-xs font-black px-3.5 py-2 rounded-xl transition-colors cursor-pointer ${
+              activeTab === 'faculty' ? 'text-[#0F172A]' : 'text-slate-500 hover:text-slate-900'
             }`}
           >
             {activeTab === 'faculty' && (
               <motion.div
                 layoutId="adminTabIndicator"
-                className="absolute inset-0 bg-white rounded-xl shadow-xs border border-slate-200/60"
+                className="absolute inset-0 bg-[#F1F5F9] rounded-xl shadow-2xs border border-slate-200"
                 transition={{ type: 'spring', damping: 25, stiffness: 350 }}
               />
             )}
             <span className="relative z-10 flex items-center gap-2">
-              <Users className="w-4 h-4 text-blue-600" />
+              <Users className="w-4 h-4 text-emerald-600" />
               Faculty Directory
             </span>
           </button>
    
           <button
             onClick={() => setActiveTab('courses')}
-            className={`relative flex items-center gap-2 text-xs font-extrabold px-3.5 py-2 rounded-xl transition-colors cursor-pointer ${
-              activeTab === 'courses' ? 'text-slate-900' : 'text-slate-500 hover:text-slate-800'
+            className={`relative flex items-center gap-2 text-xs font-black px-3.5 py-2 rounded-xl transition-colors cursor-pointer ${
+              activeTab === 'courses' ? 'text-[#0F172A]' : 'text-slate-500 hover:text-slate-900'
             }`}
           >
             {activeTab === 'courses' && (
               <motion.div
                 layoutId="adminTabIndicator"
-                className="absolute inset-0 bg-white rounded-xl shadow-xs border border-slate-200/60"
+                className="absolute inset-0 bg-[#F1F5F9] rounded-xl shadow-2xs border border-slate-200"
                 transition={{ type: 'spring', damping: 25, stiffness: 350 }}
               />
             )}
@@ -839,14 +949,14 @@ export default function AdminPanel({
    
           <button
             onClick={() => setActiveTab('rooms')}
-            className={`relative flex items-center gap-2 text-xs font-extrabold px-3.5 py-2 rounded-xl transition-colors cursor-pointer ${
-              activeTab === 'rooms' ? 'text-slate-900' : 'text-slate-500 hover:text-slate-800'
+            className={`relative flex items-center gap-2 text-xs font-black px-3.5 py-2 rounded-xl transition-colors cursor-pointer ${
+              activeTab === 'rooms' ? 'text-[#0F172A]' : 'text-slate-500 hover:text-slate-900'
             }`}
           >
             {activeTab === 'rooms' && (
               <motion.div
                 layoutId="adminTabIndicator"
-                className="absolute inset-0 bg-white rounded-xl shadow-xs border border-slate-200/60"
+                className="absolute inset-0 bg-[#F1F5F9] rounded-xl shadow-2xs border border-slate-200"
                 transition={{ type: 'spring', damping: 25, stiffness: 350 }}
               />
             )}
@@ -858,14 +968,14 @@ export default function AdminPanel({
    
           <button
             onClick={() => setActiveTab('mappings')}
-            className={`relative flex items-center gap-2 text-xs font-extrabold px-3.5 py-2 rounded-xl transition-colors cursor-pointer ${
-              activeTab === 'mappings' ? 'text-slate-900' : 'text-slate-500 hover:text-slate-800'
+            className={`relative flex items-center gap-2 text-xs font-black px-3.5 py-2 rounded-xl transition-colors cursor-pointer ${
+              activeTab === 'mappings' ? 'text-[#0F172A]' : 'text-slate-500 hover:text-slate-900'
             }`}
           >
             {activeTab === 'mappings' && (
               <motion.div
                 layoutId="adminTabIndicator"
-                className="absolute inset-0 bg-white rounded-xl shadow-xs border border-slate-200/60"
+                className="absolute inset-0 bg-[#F1F5F9] rounded-xl shadow-2xs border border-slate-200"
                 transition={{ type: 'spring', damping: 25, stiffness: 350 }}
               />
             )}
@@ -877,14 +987,14 @@ export default function AdminPanel({
 
           <button
             onClick={() => setActiveTab('curriculum')}
-            className={`relative flex items-center gap-2 text-xs font-extrabold px-3.5 py-2 rounded-xl transition-colors cursor-pointer ${
-              activeTab === 'curriculum' ? 'text-slate-900' : 'text-slate-500 hover:text-slate-800'
+            className={`relative flex items-center gap-2 text-xs font-black px-3.5 py-2 rounded-xl transition-colors cursor-pointer ${
+              activeTab === 'curriculum' ? 'text-[#0F172A]' : 'text-slate-500 hover:text-slate-900'
             }`}
           >
             {activeTab === 'curriculum' && (
               <motion.div
                 layoutId="adminTabIndicator"
-                className="absolute inset-0 bg-white rounded-xl shadow-xs border border-slate-200/60"
+                className="absolute inset-0 bg-[#F1F5F9] rounded-xl shadow-2xs border border-slate-200"
                 transition={{ type: 'spring', damping: 25, stiffness: 350 }}
               />
             )}
@@ -896,14 +1006,14 @@ export default function AdminPanel({
 
           <button
             onClick={() => setActiveTab('dashboard')}
-            className={`relative flex items-center gap-2 text-xs font-extrabold px-3.5 py-2 rounded-xl transition-colors cursor-pointer ${
-              activeTab === 'dashboard' ? 'text-slate-900' : 'text-slate-500 hover:text-slate-800'
+            className={`relative flex items-center gap-2 text-xs font-black px-3.5 py-2 rounded-xl transition-colors cursor-pointer ${
+              activeTab === 'dashboard' ? 'text-[#0F172A]' : 'text-slate-500 hover:text-slate-900'
             }`}
           >
             {activeTab === 'dashboard' && (
               <motion.div
                 layoutId="adminTabIndicator"
-                className="absolute inset-0 bg-white rounded-xl shadow-xs border border-slate-200/60"
+                className="absolute inset-0 bg-[#F1F5F9] rounded-xl shadow-2xs border border-slate-200"
                 transition={{ type: 'spring', damping: 25, stiffness: 350 }}
               />
             )}
@@ -915,33 +1025,33 @@ export default function AdminPanel({
 
           <button
             onClick={() => setActiveTab('parallel-diagnostics')}
-            className={`relative flex items-center gap-2 text-xs font-extrabold px-3.5 py-2 rounded-xl transition-colors cursor-pointer ${
-              activeTab === 'parallel-diagnostics' ? 'text-rose-900' : 'text-rose-600 hover:text-rose-800'
+            className={`relative flex items-center gap-2 text-xs font-black px-3.5 py-2 rounded-xl transition-colors cursor-pointer ${
+              activeTab === 'parallel-diagnostics' ? 'text-rose-700' : 'text-rose-600 hover:text-rose-800'
             }`}
           >
             {activeTab === 'parallel-diagnostics' && (
               <motion.div
                 layoutId="adminTabIndicator"
-                className="absolute inset-0 bg-rose-50 rounded-xl shadow-xs border border-rose-200"
+                className="absolute inset-0 bg-rose-50 rounded-xl shadow-2xs border border-rose-200"
                 transition={{ type: 'spring', damping: 25, stiffness: 350 }}
               />
             )}
             <span className="relative z-10 flex items-center gap-2">
-              <AlertTriangle className="w-4 h-4 text-rose-600" />
+              <AlertTriangle className="w-4 h-4 text-rose-500" />
               Section Overlaps
             </span>
           </button>
 
           <button
             onClick={() => setActiveTab('docs')}
-            className={`relative flex items-center gap-2 text-xs font-extrabold px-3.5 py-2 rounded-xl transition-colors cursor-pointer ${
-              activeTab === 'docs' ? 'text-slate-900' : 'text-slate-500 hover:text-slate-800'
+            className={`relative flex items-center gap-2 text-xs font-black px-3.5 py-2 rounded-xl transition-colors cursor-pointer ${
+              activeTab === 'docs' ? 'text-[#0F172A]' : 'text-slate-500 hover:text-slate-900'
             }`}
           >
             {activeTab === 'docs' && (
               <motion.div
                 layoutId="adminTabIndicator"
-                className="absolute inset-0 bg-white rounded-xl shadow-xs border border-slate-200/60"
+                className="absolute inset-0 bg-[#F1F5F9] rounded-xl shadow-2xs border border-slate-200"
                 transition={{ type: 'spring', damping: 25, stiffness: 350 }}
               />
             )}
@@ -983,748 +1093,1079 @@ export default function AdminPanel({
       {/* Tab Panels */}
       <div className="p-6">
         {/* TAB 1: Batches & Promotion */}
-        {activeTab === 'batches' && (
-          <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-slate-50 border border-slate-100 p-4 rounded-2xl">
-              <div>
-                <h3 className="text-sm font-bold text-slate-800">B.Tech Batch Configurations</h3>
-                <p className="text-xs text-slate-500 mt-1">
-                  Configure current parallel student sections, promote semesters, and clone setups.
-                </p>
-              </div>
-              {selectedBatchIds.length > 0 && (
-                <div className="flex items-center gap-3 animate-in fade-in slide-in-from-right-4 duration-200">
-                  <span className="text-xs text-slate-600 font-semibold bg-blue-50 border border-blue-100 px-3 py-1.5 rounded-xl">
-                    {selectedBatchIds.length} batch{selectedBatchIds.length > 1 ? 'es' : ''} selected
-                  </span>
+        {activeTab === 'batches' && (() => {
+          const filteredBatches = batches.filter(b => {
+            const matchesSearch = b.name.toLowerCase().includes(batchSearchQuery.toLowerCase()) ||
+              b.yearOfJoining.toString().includes(batchSearchQuery);
+            const matchesSem = batchSemesterFilter === 'all' || b.semester === Number(batchSemesterFilter);
+            return matchesSearch && matchesSem;
+          });
+
+          return (
+            <div className="space-y-5">
+              {/* Top Header & Actions Strip */}
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white border border-slate-200 p-4 sm:p-5 rounded-3xl shadow-xs">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-base font-black text-[#0F172A]">B.Tech Batch Configurations</h3>
+                    <span className="text-[10px] font-mono font-extrabold bg-blue-50 text-blue-700 border border-blue-200 px-2.5 py-0.5 rounded-full">
+                      {batches.length} Sections Total
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Configure current parallel student sections, promote semesters, and clone setups.
+                  </p>
+                </div>
+
+                <div className="flex items-center flex-wrap gap-2.5">
+                  {selectedBatchIds.length > 0 && (
+                    <button
+                      onClick={handlePromoteMultiple}
+                      className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-black px-4 py-2.5 rounded-xl shadow-md transition-colors flex items-center gap-1.5 cursor-pointer active:scale-95"
+                    >
+                      <ArrowUpRight className="w-4 h-4" />
+                      <span>Promote ({selectedBatchIds.length})</span>
+                    </button>
+                  )}
+
                   <button
-                    onClick={handlePromoteMultiple}
-                    className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-md transition-colors flex items-center gap-1.5"
+                    onClick={() => setShowAddBatchForm(!showAddBatchForm)}
+                    className={`text-xs font-black px-4 py-2.5 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shadow-xs ${
+                      showAddBatchForm
+                        ? 'bg-slate-800 text-white hover:bg-slate-900'
+                        : 'bg-[#4F46E5] hover:bg-[#4338CA] text-white shadow-indigo-500/20'
+                    }`}
                   >
-                    <ArrowUpRight className="w-4 h-4" />
-                    Promote Selected
+                    {showAddBatchForm ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+                    <span>{showAddBatchForm ? 'Close Add Form' : '+ Add New Batch'}</span>
                   </button>
                 </div>
-              )}
-            </div>
+              </div>
 
-            {/* Grid layout */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Form Card */}
-              <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100 h-fit">
-                <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-4 flex items-center gap-1.5">
-                  <Plus className="w-4 h-4 text-blue-600" />
-                  Add New Batch
-                </h4>
-                <form onSubmit={handleAddBatch} className="space-y-4">
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-600 mb-1">Batch Section Name *</label>
-                    <input
-                      type="text"
-                      placeholder="Batch Section Name"
-                      value={newBatch.name}
-                      onChange={e => setNewBatch({ ...newBatch, name: e.target.value })}
-                      className="w-full text-xs p-3 rounded-xl border border-slate-200 bg-white focus:outline-blue-600"
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-600 mb-1">Year of Joining</label>
-                      <input
-                        type="number"
-                        value={newBatch.yearOfJoining}
-                        onChange={e => setNewBatch({ ...newBatch, yearOfJoining: Number(e.target.value) })}
-                        className="w-full text-xs p-3 rounded-xl border border-slate-200 bg-white focus:outline-blue-600"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-600 mb-1">Semester</label>
-                      <input
-                        type="number"
-                        min={1}
-                        max={8}
-                        value={newBatch.semester}
-                        onChange={e => setNewBatch({ ...newBatch, semester: Number(e.target.value) })}
-                        className="w-full text-xs p-3 rounded-xl border border-slate-200 bg-white focus:outline-blue-600"
-                      />
-                    </div>
-                  </div>
-                  <button
-                    type="submit"
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-xl text-xs transition-colors shadow-sm flex items-center justify-center gap-2"
+              {/* Separated Top Full-Width Add Batch Drawer / Form Card */}
+              <AnimatePresence>
+                {showAddBatchForm && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0, y: -8 }}
+                    animate={{ opacity: 1, height: 'auto', y: 0 }}
+                    exit={{ opacity: 0, height: 0, y: -8 }}
+                    className="overflow-hidden"
                   >
-                    Create Batch
-                  </button>
-                </form>
-              </div>
-
-              {/* Table Card */}
-              <div className="lg:col-span-2 border border-slate-100 rounded-2xl overflow-hidden">
-                <table className="w-full text-left text-xs border-collapse">
-                  <thead>
-                    <tr className="bg-slate-50 border-b border-slate-100 text-slate-500 font-bold">
-                      <th className="p-4 w-12 text-center">
-                        <input
-                          type="checkbox"
-                          checked={batches.length > 0 && selectedBatchIds.length === batches.length}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setSelectedBatchIds(batches.map(b => b.id));
-                            } else {
-                              setSelectedBatchIds([]);
-                            }
-                          }}
-                          className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
-                        />
-                      </th>
-                      <th className="p-4">Batch Name</th>
-                      <th className="p-4">Year of Joining</th>
-                      <th className="p-4">Semester</th>
-                      <th className="p-4 text-center">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {batches.map((batch) => {
-                      const isSelected = selectedBatchIds.includes(batch.id);
-                      return (
-                        <tr key={batch.id} className={`hover:bg-slate-50/50 transition-colors ${isSelected ? 'bg-blue-50/20' : ''}`}>
-                          <td className="p-4 w-12 text-center">
-                            <input
-                              type="checkbox"
-                              checked={isSelected}
-                              onChange={(e) => {
-                                if (e.target.checked) {
-                                  setSelectedBatchIds([...selectedBatchIds, batch.id]);
-                                } else {
-                                  setSelectedBatchIds(selectedBatchIds.filter(id => id !== batch.id));
-                                }
-                              }}
-                              className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
-                            />
-                          </td>
-                          <td className="p-4 font-bold text-slate-800">{batch.name}</td>
-                          <td className="p-4 text-slate-500">{batch.yearOfJoining}</td>
-                          <td className="p-4">
-                            <span className="bg-blue-50 text-blue-700 font-semibold px-2.5 py-1 rounded-full text-[11px] border border-blue-100">
-                              Sem {batch.semester}
-                            </span>
-                          </td>
-                          <td className="p-4">
-                            <div className="flex items-center justify-center gap-2">
-                              <button
-                                onClick={() => handlePromoteBatch(batch.id)}
-                                title="Promote Semester & map syllabus courses"
-                                className="bg-blue-50 hover:bg-blue-100 border border-blue-100 text-blue-700 font-bold px-2.5 py-1.5 rounded-lg text-[10px] transition-colors flex items-center gap-1"
-                              >
-                                <ArrowUpRight className="w-3.5 h-3.5" />
-                                Promote
-                              </button>
-
-                              <button
-                                onClick={() => handleCloneBatchTemplate(batch.id)}
-                                title="Clone layout structures"
-                                className="bg-emerald-50 hover:bg-emerald-100 border border-emerald-100 text-emerald-700 font-bold px-2.5 py-1.5 rounded-lg text-[10px] transition-colors flex items-center gap-1"
-                              >
-                                <RefreshCw className="w-3.5 h-3.5 animate-spin-hover" />
-                                Clone
-                              </button>
-
-                              <button
-                                onClick={() => handleDeleteBatch(batch.id, batch.name)}
-                                className="p-1.5 hover:bg-red-50 text-slate-400 hover:text-red-600 border border-slate-100 rounded-lg transition-all"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* TAB 2: Faculty Directory */}
-        {activeTab === 'faculty' && (
-          <div className="space-y-6">
-            <div>
-              <h3 className="text-sm font-bold text-slate-800">Faculty Index Directory</h3>
-              <p className="text-xs text-slate-500 mt-1">
-                Maintain directory databases of registered professors, instructors, academic specializations and courses they teach.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100 h-fit">
-                <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-4 flex items-center gap-1.5">
-                  <Plus className="w-4 h-4 text-blue-600" />
-                  Add Faculty
-                </h4>
-                <form onSubmit={handleAddFaculty} className="space-y-4">
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-600 mb-1">Full Instructor Name *</label>
-                    <input
-                      type="text"
-                      placeholder="Full Name"
-                      value={newFaculty.name}
-                      onChange={e => setNewFaculty({ ...newFaculty, name: e.target.value })}
-                      className="w-full text-xs p-3 rounded-xl border border-slate-200 bg-white focus:outline-blue-600"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-600 mb-1">Designation *</label>
-                    <input
-                      type="text"
-                      placeholder="e.g., Professor, Assistant Professor"
-                      value={newFaculty.designation}
-                      onChange={e => setNewFaculty({ ...newFaculty, designation: e.target.value })}
-                      className="w-full text-xs p-3 rounded-xl border border-slate-200 bg-white focus:outline-blue-600"
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-600 mb-1">Mobile Contact No. *</label>
-                      <input
-                        type="text"
-                        placeholder="Contact Number"
-                        value={newFaculty.phone}
-                        onChange={e => setNewFaculty({ ...newFaculty, phone: e.target.value })}
-                        className="w-full text-xs p-3 rounded-xl border border-slate-200 bg-white focus:outline-blue-600"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-600 mb-1">Max Hrs / Day</label>
-                      <input
-                        type="number"
-                        value={newFaculty.maxHoursPerDay}
-                        onChange={e => setNewFaculty({ ...newFaculty, maxHoursPerDay: Number(e.target.value) })}
-                        className="w-full text-xs p-3 rounded-xl border border-slate-200 bg-white focus:outline-blue-600"
-                      />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-600 mb-1">Division / Dept</label>
-                      <input
-                        type="text"
-                        placeholder="Department"
-                        value={newFaculty.division}
-                        onChange={e => setNewFaculty({ ...newFaculty, division: e.target.value })}
-                        className="w-full text-xs p-3 rounded-xl border border-slate-200 bg-white focus:outline-blue-600"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-600 mb-1">Specialization</label>
-                      <input
-                        type="text"
-                        placeholder="Specialization"
-                        value={newFaculty.specialization}
-                        onChange={e => setNewFaculty({ ...newFaculty, specialization: e.target.value })}
-                        className="w-full text-xs p-3 rounded-xl border border-slate-200 bg-white focus:outline-blue-600"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <div className="flex justify-between items-center mb-1">
-                      <label className="block text-xs font-semibold text-slate-600">Courses Able to Teach</label>
-                      <div className="flex gap-1.5">
+                    <div className="bg-gradient-to-r from-blue-50/90 via-indigo-50/70 to-slate-50 p-5 sm:p-6 rounded-3xl border-2 border-blue-200 shadow-sm space-y-4">
+                      <div className="flex items-center justify-between border-b border-blue-100 pb-3">
+                        <div className="flex items-center gap-2">
+                          <Plus className="w-4 h-4 text-blue-600 font-black" />
+                          <h4 className="text-xs font-black uppercase tracking-wider text-slate-800">
+                            Create New Section / Batch
+                          </h4>
+                        </div>
                         <button
                           type="button"
-                          onClick={() => setNewFaculty({ ...newFaculty, selectedCourseIds: courses.map(c => c.id) })}
-                          className="text-[9px] text-blue-600 font-bold hover:underline"
+                          onClick={() => setShowAddBatchForm(false)}
+                          className="p-1 text-slate-400 hover:text-slate-600 rounded-lg cursor-pointer"
                         >
-                          Select All
-                        </button>
-                        <span className="text-[9px] text-slate-300">|</span>
-                        <button
-                          type="button"
-                          onClick={() => setNewFaculty({ ...newFaculty, selectedCourseIds: [] })}
-                          className="text-[9px] text-slate-500 font-bold hover:underline"
-                        >
-                          Clear
+                          <X className="w-4 h-4" />
                         </button>
                       </div>
+
+                      <form onSubmit={(e) => { handleAddBatch(e); setShowAddBatchForm(false); }} className="space-y-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                          <div>
+                            <label className="block text-xs font-bold text-slate-700 mb-1">Batch Section Name *</label>
+                            <input
+                              type="text"
+                              placeholder="e.g. CSE-D (Sem 4)"
+                              value={newBatch.name}
+                              onChange={e => setNewBatch({ ...newBatch, name: e.target.value })}
+                              className="w-full text-xs font-bold p-3 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-bold text-slate-700 mb-1">Year of Joining</label>
+                            <input
+                              type="number"
+                              value={newBatch.yearOfJoining}
+                              onChange={e => setNewBatch({ ...newBatch, yearOfJoining: Number(e.target.value) })}
+                              className="w-full text-xs font-bold p-3 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-bold text-slate-700 mb-1">Semester (1 to 8)</label>
+                            <input
+                              type="number"
+                              min={1}
+                              max={8}
+                              value={newBatch.semester}
+                              onChange={e => setNewBatch({ ...newBatch, semester: Number(e.target.value) })}
+                              className="w-full text-xs font-bold p-3 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-end gap-3 pt-2">
+                          <button
+                            type="button"
+                            onClick={() => setShowAddBatchForm(false)}
+                            className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 bg-white border border-slate-200 cursor-pointer"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            type="submit"
+                            className="bg-blue-600 hover:bg-blue-700 text-white font-black py-2.5 px-6 rounded-xl text-xs transition-colors shadow-sm flex items-center justify-center gap-2 cursor-pointer"
+                          >
+                            <Plus className="w-4 h-4" />
+                            <span>Create Batch</span>
+                          </button>
+                        </div>
+                      </form>
                     </div>
-                    <div className="max-h-40 overflow-y-auto border border-slate-200 rounded-xl p-3 bg-white space-y-1.5 scrollbar-thin">
-                      {courses.length === 0 ? (
-                        <div className="text-[10px] text-slate-400 text-center py-4">No syllabus courses available. Create courses first!</div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Full-Width Search, Semester Filter Strip & Batch Directory Table */}
+              <div className="bg-white border border-slate-200 rounded-3xl p-4 sm:p-5 shadow-xs space-y-4">
+                {/* Search & Semester Filter Pills */}
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+                  <div className="relative flex-1 max-w-sm">
+                    <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      placeholder="Search section name or year..."
+                      value={batchSearchQuery}
+                      onChange={(e) => setBatchSearchQuery(e.target.value)}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3 py-2 text-xs font-bold text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:bg-white"
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-1 overflow-x-auto pb-1 custom-scrollbar">
+                    {['all', '8', '7', '6', '5', '4', '3', '2', '1'].map((sem) => {
+                      const isSel = batchSemesterFilter === sem;
+                      const count = sem === 'all' ? batches.length : batches.filter(b => b.semester === Number(sem)).length;
+                      return (
+                        <button
+                          key={sem}
+                          onClick={() => setBatchSemesterFilter(sem)}
+                          className={`px-3 py-1.5 rounded-xl text-[11px] font-extrabold transition-all cursor-pointer shrink-0 border flex items-center gap-1.5 ${
+                            isSel
+                              ? 'bg-blue-600 text-white border-blue-600 shadow-2xs'
+                              : 'bg-slate-50 hover:bg-slate-100 text-slate-600 border-slate-200'
+                          }`}
+                        >
+                          <span>{sem === 'all' ? 'All Semesters' : `Sem ${sem}`}</span>
+                          <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
+                            isSel ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'
+                          }`}>
+                            {count}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Full-Width Table with Bounded Internal Scroll */}
+                <div className="border border-slate-200 rounded-2xl overflow-hidden max-h-[480px] overflow-y-auto custom-scrollbar bg-white">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead className="sticky top-0 bg-slate-50/95 backdrop-blur-xs z-10 shadow-2xs">
+                      <tr className="border-b border-slate-200 text-slate-500 font-extrabold uppercase tracking-wider text-[10px]">
+                        <th className="p-3.5 w-12 text-center">
+                          <input
+                            type="checkbox"
+                            checked={filteredBatches.length > 0 && selectedBatchIds.length === filteredBatches.length}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedBatchIds(filteredBatches.map(b => b.id));
+                              } else {
+                                setSelectedBatchIds([]);
+                              }
+                            }}
+                            className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                          />
+                        </th>
+                        <th className="p-3.5">Batch Name</th>
+                        <th className="p-3.5">Year of Joining</th>
+                        <th className="p-3.5">Semester</th>
+                        <th className="p-3.5 text-center">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 font-medium">
+                      {filteredBatches.length === 0 ? (
+                        <tr>
+                          <td colSpan={5} className="p-8 text-center text-slate-400">
+                            No batches match your filter or search query.
+                          </td>
+                        </tr>
                       ) : (
-                        courses.map(course => {
-                          const isChecked = newFaculty.selectedCourseIds.includes(course.id);
+                        filteredBatches.map((batch) => {
+                          const isSelected = selectedBatchIds.includes(batch.id);
                           return (
-                            <label key={course.id} className="flex items-start gap-2 text-[11px] font-medium text-slate-700 cursor-pointer hover:bg-slate-50 p-1 rounded">
-                              <input
-                                type="checkbox"
-                                checked={isChecked}
-                                onChange={(e) => {
-                                  if (e.target.checked) {
-                                    setNewFaculty({
-                                      ...newFaculty,
-                                      selectedCourseIds: [...newFaculty.selectedCourseIds, course.id]
-                                    });
-                                  } else {
-                                    setNewFaculty({
-                                      ...newFaculty,
-                                      selectedCourseIds: newFaculty.selectedCourseIds.filter(id => id !== course.id)
-                                    });
-                                  }
-                                }}
-                                className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer mt-0.5"
-                              />
-                              <span className="flex-1">
-                                <strong className="font-mono text-[10px] bg-slate-100 text-slate-600 px-1 py-0.5 rounded mr-1 border border-slate-200">{course.courseCode}</strong>
-                                {course.name}
-                              </span>
-                            </label>
+                            <tr key={batch.id} className={`hover:bg-slate-50/70 transition-colors ${isSelected ? 'bg-blue-50/30' : ''}`}>
+                              <td className="p-3.5 w-12 text-center">
+                                <input
+                                  type="checkbox"
+                                  checked={isSelected}
+                                  onChange={(e) => {
+                                    if (e.target.checked) {
+                                      setSelectedBatchIds([...selectedBatchIds, batch.id]);
+                                    } else {
+                                      setSelectedBatchIds(selectedBatchIds.filter(id => id !== batch.id));
+                                    }
+                                  }}
+                                  className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                                />
+                              </td>
+                              <td className="p-3.5 font-bold text-[#0F172A] flex items-center gap-2">
+                                <span>{batch.name}</span>
+                                {batch.studentCount && (
+                                  <span className="text-[10px] font-mono text-slate-400 font-normal">({batch.studentCount} students)</span>
+                                )}
+                              </td>
+                              <td className="p-3.5 text-slate-500 font-mono">{batch.yearOfJoining}</td>
+                              <td className="p-3.5">
+                                <span className="bg-blue-50 text-blue-700 font-bold px-2.5 py-1 rounded-full text-[11px] border border-blue-100">
+                                  Sem {batch.semester}
+                                </span>
+                              </td>
+                              <td className="p-3.5">
+                                <div className="flex items-center justify-center gap-1.5">
+                                  <button
+                                    onClick={() => handlePromoteBatch(batch.id)}
+                                    title="Promote Semester & map syllabus courses"
+                                    className="bg-blue-50 hover:bg-blue-100 border border-blue-100 text-blue-700 font-bold px-2.5 py-1.5 rounded-lg text-[10px] transition-colors flex items-center gap-1 cursor-pointer"
+                                  >
+                                    <ArrowUpRight className="w-3.5 h-3.5" />
+                                    <span>Promote</span>
+                                  </button>
+
+                                  <button
+                                    onClick={() => handleCloneBatchTemplate(batch.id)}
+                                    title="Clone layout structures"
+                                    className="bg-emerald-50 hover:bg-emerald-100 border border-emerald-100 text-emerald-700 font-bold px-2.5 py-1.5 rounded-lg text-[10px] transition-colors flex items-center gap-1 cursor-pointer"
+                                  >
+                                    <RefreshCw className="w-3.5 h-3.5" />
+                                    <span>Clone</span>
+                                  </button>
+
+                                  <button
+                                    onClick={() => handleDeleteBatch(batch.id, batch.name)}
+                                    className="p-1.5 hover:bg-red-50 text-slate-400 hover:text-red-600 border border-slate-100 rounded-lg transition-all cursor-pointer"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
                           );
                         })
                       )}
-                    </div>
-                  </div>
-                  <button
-                    type="submit"
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-xl text-xs transition-colors shadow-sm cursor-pointer"
-                  >
-                    Add Instructor
-                  </button>
-                </form>
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="flex items-center justify-between text-xs text-slate-500 px-1 pt-1">
+                  <span>Showing <strong>{filteredBatches.length}</strong> of {batches.length} batch sections</span>
+                  {batchSemesterFilter !== 'all' && (
+                    <button
+                      onClick={() => setBatchSemesterFilter('all')}
+                      className="text-blue-600 font-bold hover:underline cursor-pointer"
+                    >
+                      Clear Semester Filter
+                    </button>
+                  )}
+                </div>
               </div>
+            </div>
+          );
+        })()}
 
-              <div className="lg:col-span-2 border border-slate-100 rounded-2xl overflow-hidden max-h-[580px] overflow-y-auto shadow-sm bg-white">
-                <table className="w-full text-left text-xs border-collapse">
-                  <thead>
-                    <tr className="bg-slate-50 border-b border-slate-100 text-slate-500 font-bold sticky top-0 z-10">
-                      <th className="p-4">Faculty Member & Info</th>
-                      <th className="p-4">Courses Capable to Teach</th>
-                      <th className="p-4">Hours & Contact</th>
-                      <th className="p-4 text-center">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {faculty.map((f) => {
-                      const facultyMappings = mappings.filter(m => m.facultyId === f.id);
-                      const mappedCourses = facultyMappings
-                        .map(m => courses.find(c => c.id === m.courseId))
-                        .filter((c): c is Course => !!c);
+        {/* TAB 2: Faculty Directory */}
+        {activeTab === 'faculty' && (() => {
+          const filteredFaculty = faculty.filter(f => {
+            const matchesQuery = !facultySearchQuery.trim() || 
+              f.name.toLowerCase().includes(facultySearchQuery.toLowerCase()) ||
+              (f.designation && f.designation.toLowerCase().includes(facultySearchQuery.toLowerCase())) ||
+              (f.division && f.division.toLowerCase().includes(facultySearchQuery.toLowerCase())) ||
+              (f.specialization && f.specialization.toLowerCase().includes(facultySearchQuery.toLowerCase()));
+            const matchesDept = facultyDeptFilter === 'all' || f.division === facultyDeptFilter;
+            return matchesQuery && matchesDept;
+          });
 
+          const departments = Array.from(new Set(faculty.map(f => f.division).filter(Boolean)));
+
+          return (
+            <div className="space-y-6">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                <div>
+                  <h3 className="text-sm font-bold text-slate-800">Faculty Index Directory</h3>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Maintain directory databases of registered professors, instructors, academic specializations and courses they teach.
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <select
+                    value={facultyDeptFilter}
+                    onChange={(e) => setFacultyDeptFilter(e.target.value)}
+                    className="text-xs px-3 py-1.5 rounded-xl border border-slate-200 bg-white font-bold text-slate-700 focus:outline-blue-600 cursor-pointer"
+                  >
+                    <option value="all">All Divisions ({faculty.length})</option>
+                    {departments.map((dept) => {
+                      const count = faculty.filter(f => f.division === dept).length;
                       return (
-                        <tr key={f.id} className="hover:bg-slate-50/50 transition-all">
-                          <td className="p-4 space-y-1">
-                            <div className="font-bold text-slate-800 text-sm">{f.name}</div>
-                            <div className="flex flex-wrap gap-1 items-center">
-                              {f.designation && (
-                                <span className="px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-100 text-[9px] font-semibold">
-                                  {f.designation}
-                                </span>
-                              )}
-                              {f.division && (
-                                <span className="px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 border border-blue-100 text-[9px] font-semibold">
-                                  Dept: {f.division}
-                                </span>
-                              )}
-                              {f.specialization && (
-                                <span className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 border border-slate-200 text-[9px] font-semibold">
-                                  Spec: {f.specialization}
-                                </span>
-                              )}
-                              {!f.designation && !f.division && !f.specialization && (
-                                <span className="text-[10px] text-slate-400 italic">No additional details</span>
-                              )}
-                            </div>
-                          </td>
-                          <td className="p-4">
-                            {mappedCourses.length === 0 ? (
-                              <span className="text-[10px] text-slate-400 italic">None assigned yet</span>
-                            ) : (
-                              <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto max-w-xs pr-1">
-                                {mappedCourses.map(c => (
-                                  <span key={c.id} className="px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-100 text-[9px] font-bold inline-block" title={c.name}>
-                                    {c.courseCode}
-                                  </span>
-                                ))}
-                              </div>
-                            )}
-                          </td>
-                          <td className="p-4 space-y-0.5">
-                            <div className="font-mono text-slate-500 font-medium">{f.phone}</div>
-                            <div className="text-[10px] text-slate-600">
-                              Max Load: <strong className="text-blue-600">{f.maxHoursPerDay} hrs/day</strong>
-                            </div>
-                          </td>
-                          <td className="p-4 text-center">
-                            <div className="flex justify-center items-center gap-1.5">
-                              <button
-                                onClick={() => handleStartEditFaculty(f)}
-                                className="p-1.5 hover:bg-blue-50 text-blue-500 hover:text-blue-700 rounded-lg transition-all border border-transparent hover:border-blue-100 cursor-pointer"
-                                title="Edit Faculty details & courses"
-                              >
-                                <Edit2 className="w-4 h-4" />
-                              </button>
-                              <button
-                                onClick={() => handleDeleteFaculty(f.id, f.name)}
-                                className="p-1.5 hover:bg-red-50 text-slate-400 hover:text-red-600 rounded-lg transition-all border border-transparent hover:border-red-100 cursor-pointer"
-                                title="Delete Faculty member"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
+                        <option key={dept} value={dept}>
+                          {dept} ({count})
+                        </option>
                       );
                     })}
-                  </tbody>
-                </table>
+                  </select>
+
+                  <div className="relative">
+                    <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
+                    <input
+                      type="text"
+                      placeholder="Search faculty..."
+                      value={facultySearchQuery}
+                      onChange={(e) => setFacultySearchQuery(e.target.value)}
+                      className="text-xs pl-8 pr-3 py-1.5 rounded-xl border border-slate-200 bg-white focus:outline-blue-600 w-48"
+                    />
+                    {facultySearchQuery && (
+                      <button onClick={() => setFacultySearchQuery('')} className="absolute right-2.5 top-2 text-slate-400 hover:text-slate-600">
+                        <X className="w-3 h-3" />
+                      </button>
+                    )}
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
-        )}
 
-        {/* TAB 3: Syllabus Catalog */}
-        {activeTab === 'courses' && (
-          <div className="space-y-6">
-            <div>
-              <h3 className="text-sm font-bold text-slate-800">Academic Syllabus Syllabus Course Catalog</h3>
-              <p className="text-xs text-slate-500 mt-1">
-                Establish subject course listings, credit values, and daily slot hour durations.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100 h-fit">
-                <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-4 flex items-center gap-1.5">
-                  <Plus className="w-4 h-4 text-blue-600" />
-                  Add Course Syllabus
-                </h4>
-                <form onSubmit={handleAddCourse} className="space-y-4">
-                  <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100 h-fit">
+                  <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-4 flex items-center gap-1.5">
+                    <Plus className="w-4 h-4 text-blue-600" />
+                    Add Faculty
+                  </h4>
+                  <form onSubmit={handleAddFaculty} className="space-y-4">
                     <div>
-                      <label className="block text-xs font-semibold text-slate-600 mb-1">Subject Code *</label>
+                      <label className="block text-xs font-semibold text-slate-600 mb-1">Full Instructor Name *</label>
                       <input
                         type="text"
-                        placeholder="Subject Code"
-                        value={newCourse.courseCode}
-                        onChange={e => setNewCourse({ ...newCourse, courseCode: e.target.value })}
+                        placeholder="Full Name"
+                        value={newFaculty.name}
+                        onChange={e => setNewFaculty({ ...newFaculty, name: e.target.value })}
                         className="w-full text-xs p-3 rounded-xl border border-slate-200 bg-white focus:outline-blue-600"
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold text-slate-600 mb-1">Credits</label>
+                      <label className="block text-xs font-semibold text-slate-600 mb-1">Designation *</label>
                       <input
-                        type="number"
-                        step={0.5}
-                        value={newCourse.credits}
-                        onChange={e => setNewCourse({ ...newCourse, credits: Number(e.target.value) })}
+                        type="text"
+                        placeholder="e.g., Professor, Assistant Professor"
+                        value={newFaculty.designation}
+                        onChange={e => setNewFaculty({ ...newFaculty, designation: e.target.value })}
                         className="w-full text-xs p-3 rounded-xl border border-slate-200 bg-white focus:outline-blue-600"
                       />
                     </div>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-600 mb-1">Subject Name *</label>
-                    <input
-                      type="text"
-                      placeholder="Subject Name"
-                      value={newCourse.name}
-                      onChange={e => setNewCourse({ ...newCourse, name: e.target.value })}
-                      className="w-full text-xs p-3 rounded-xl border border-slate-200 bg-white focus:outline-blue-600"
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-600 mb-1">Type</label>
-                      <select
-                        value={newCourse.type}
-                        onChange={e => {
-                          const type = e.target.value as Course['type'];
-                          const durationSlots = type === 'Lab' ? 2 : type === 'Long Duration' ? 4 : 1;
-                          setNewCourse({ ...newCourse, type, durationSlots });
-                        }}
-                        className="w-full text-xs p-3 rounded-xl border border-slate-200 bg-white focus:outline-blue-600"
-                      >
-                        <option value="Theory">Theory</option>
-                        <option value="Lab">Lab (2 hours)</option>
-                        <option value="Long Duration">Long Duration</option>
-                        <option value="Non-Academic">Non-Academic</option>
-                      </select>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-600 mb-1">Mobile Contact No. *</label>
+                        <input
+                          type="text"
+                          placeholder="Contact Number"
+                          value={newFaculty.phone}
+                          onChange={e => setNewFaculty({ ...newFaculty, phone: e.target.value })}
+                          className="w-full text-xs p-3 rounded-xl border border-slate-200 bg-white focus:outline-blue-600"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-600 mb-1">Max Hrs / Day</label>
+                        <input
+                          type="number"
+                          value={newFaculty.maxHoursPerDay}
+                          onChange={e => setNewFaculty({ ...newFaculty, maxHoursPerDay: Number(e.target.value) })}
+                          className="w-full text-xs p-3 rounded-xl border border-slate-200 bg-white focus:outline-blue-600"
+                        />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-600 mb-1">Division / Dept</label>
+                        <input
+                          type="text"
+                          placeholder="Department"
+                          value={newFaculty.division}
+                          onChange={e => setNewFaculty({ ...newFaculty, division: e.target.value })}
+                          className="w-full text-xs p-3 rounded-xl border border-slate-200 bg-white focus:outline-blue-600"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-600 mb-1">Specialization</label>
+                        <input
+                          type="text"
+                          placeholder="Specialization"
+                          value={newFaculty.specialization}
+                          onChange={e => setNewFaculty({ ...newFaculty, specialization: e.target.value })}
+                          className="w-full text-xs p-3 rounded-xl border border-slate-200 bg-white focus:outline-blue-600"
+                        />
+                      </div>
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold text-slate-600 mb-1">Consecutive Slots</label>
-                      <input
-                        type="number"
-                        value={newCourse.durationSlots}
-                        onChange={e => setNewCourse({ ...newCourse, durationSlots: Number(e.target.value) })}
-                        className="w-full text-xs p-3 rounded-xl border border-slate-200 bg-white focus:outline-blue-600"
-                      />
+                      <div className="flex justify-between items-center mb-1">
+                        <label className="block text-xs font-semibold text-slate-600">Courses Able to Teach</label>
+                        <div className="flex gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => setNewFaculty({ ...newFaculty, selectedCourseIds: courses.map(c => c.id) })}
+                            className="text-[9px] text-blue-600 font-bold hover:underline"
+                          >
+                            Select All
+                          </button>
+                          <span className="text-[9px] text-slate-300">|</span>
+                          <button
+                            type="button"
+                            onClick={() => setNewFaculty({ ...newFaculty, selectedCourseIds: [] })}
+                            className="text-[9px] text-slate-500 font-bold hover:underline"
+                          >
+                            Clear
+                          </button>
+                        </div>
+                      </div>
+                      <div className="max-h-40 overflow-y-auto border border-slate-200 rounded-xl p-3 bg-white space-y-1.5 custom-scrollbar">
+                        {courses.length === 0 ? (
+                          <div className="text-[10px] text-slate-400 text-center py-4">No syllabus courses available. Create courses first!</div>
+                        ) : (
+                          courses.map(course => {
+                            const isChecked = newFaculty.selectedCourseIds.includes(course.id);
+                            return (
+                              <label key={course.id} className="flex items-start gap-2 text-[11px] font-medium text-slate-700 cursor-pointer hover:bg-slate-50 p-1 rounded">
+                                <input
+                                  type="checkbox"
+                                  checked={isChecked}
+                                  onChange={(e) => {
+                                    if (e.target.checked) {
+                                      setNewFaculty({
+                                        ...newFaculty,
+                                        selectedCourseIds: [...newFaculty.selectedCourseIds, course.id]
+                                      });
+                                    } else {
+                                      setNewFaculty({
+                                        ...newFaculty,
+                                        selectedCourseIds: newFaculty.selectedCourseIds.filter(id => id !== course.id)
+                                      });
+                                    }
+                                  }}
+                                  className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer mt-0.5"
+                                />
+                                <span className="flex-1">
+                                  <strong className="font-mono text-[10px] bg-slate-100 text-slate-600 px-1 py-0.5 rounded mr-1 border border-slate-200">{course.courseCode}</strong>
+                                  {course.name}
+                                </span>
+                              </label>
+                            );
+                          })
+                        )}
+                      </div>
                     </div>
-                  </div>
-                  <button
-                    type="submit"
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-xl text-xs transition-colors shadow-sm"
-                  >
-                    Add Syllabus Course
-                  </button>
-                </form>
-              </div>
+                    <button
+                      type="submit"
+                      className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-xl text-xs transition-colors shadow-sm cursor-pointer"
+                    >
+                      Add Instructor
+                    </button>
+                  </form>
+                </div>
 
-              <div className="lg:col-span-2 border border-slate-100 rounded-2xl overflow-hidden max-h-[500px] overflow-y-auto">
-                <table className="w-full text-left text-xs border-collapse">
-                  <thead>
-                    <tr className="bg-slate-50 border-b border-slate-100 text-slate-500 font-bold sticky top-0 z-10">
-                      <th className="p-4">Subject Code</th>
-                      <th className="p-4">Subject Name</th>
-                      <th className="p-4">Type</th>
-                      <th className="p-4">Credits</th>
-                      <th className="p-4 text-center">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {courses.map((c) => (
-                      <tr key={c.id} className="hover:bg-slate-50/50">
-                        <td className="p-4 font-mono font-bold text-blue-600">{c.courseCode}</td>
-                        <td className="p-4 font-medium text-slate-800">{c.name}</td>
-                        <td className="p-4">
-                          <span className={`px-2 py-0.5 rounded text-[10px] font-semibold border ${
-                            c.type === 'Lab'
-                              ? 'bg-purple-50 border-purple-100 text-purple-700'
-                              : c.type === 'Long Duration'
-                              ? 'bg-emerald-50 border-emerald-100 text-emerald-700'
-                              : c.type === 'Non-Academic'
-                              ? 'bg-amber-50 border-amber-100 text-amber-700'
-                              : 'bg-blue-50 border-blue-100 text-blue-700'
-                          }`}>
-                            {c.type} ({c.durationSlots} {c.durationSlots > 1 ? 'hrs' : 'hr'})
-                          </span>
-                        </td>
-                        <td className="p-4 font-mono text-slate-600 font-medium">{c.credits}</td>
-                        <td className="p-4 text-center">
-                          <button
-                            onClick={() => handleDeleteCourse(c.id, c.name)}
-                            className="p-1.5 hover:bg-red-50 text-slate-400 hover:text-red-600 rounded-lg transition-all"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </td>
+                <div className="lg:col-span-2 border border-slate-100 rounded-2xl overflow-hidden max-h-[580px] overflow-y-auto custom-scrollbar shadow-sm bg-white">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead>
+                      <tr className="bg-slate-50 border-b border-slate-100 text-slate-500 font-bold sticky top-0 z-10">
+                        <th className="p-4">Faculty Member & Info ({filteredFaculty.length})</th>
+                        <th className="p-4">Courses Capable to Teach</th>
+                        <th className="p-4">Hours & Contact</th>
+                        <th className="p-4 text-center">Action</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        )}
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {filteredFaculty.map((f) => {
+                        const facultyMappings = mappings.filter(m => m.facultyId === f.id);
+                        const mappedCourses = facultyMappings
+                          .map(m => courses.find(c => c.id === m.courseId))
+                          .filter((c): c is Course => !!c);
 
-        {/* TAB 4: Classrooms */}
-        {activeTab === 'rooms' && (
-          <div className="space-y-6">
-            <div>
-              <h3 className="text-sm font-bold text-slate-800">Classroom Assignment Registry</h3>
-              <p className="text-xs text-slate-500 mt-1">
-                Maintain room numbers, physical room categories, and student seating capacities.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100 h-fit">
-                <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-4 flex items-center gap-1.5">
-                  <Plus className="w-4 h-4 text-blue-600" />
-                  Add Classroom
-                </h4>
-                <form onSubmit={handleAddRoom} className="space-y-4">
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-600 mb-1">Room Code / Number *</label>
-                    <input
-                      type="text"
-                      placeholder="Room Code / Number"
-                      value={newRoom.roomNumber}
-                      onChange={e => setNewRoom({ ...newRoom, roomNumber: e.target.value })}
-                      className="w-full text-xs p-3 rounded-xl border border-slate-200 bg-white focus:outline-blue-600"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-600 mb-1">Room Category</label>
-                    <select
-                      value={newRoom.type}
-                      onChange={e => setNewRoom({ ...newRoom, type: e.target.value as Room['type'] })}
-                      className="w-full text-xs p-3 rounded-xl border border-slate-200 bg-white focus:outline-blue-600"
-                    >
-                      <option value="Theory">Theory Classroom</option>
-                      <option value="Lab">Syllabus Laboratory</option>
-                      <option value="Seminar">Seminar Auditorium</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-600 mb-1">Student Seating Capacity</label>
-                    <input
-                      type="number"
-                      value={newRoom.capacity}
-                      onChange={e => setNewRoom({ ...newRoom, capacity: Number(e.target.value) })}
-                      className="w-full text-xs p-3 rounded-xl border border-slate-200 bg-white focus:outline-blue-600"
-                    />
-                  </div>
-                  <button
-                    type="submit"
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-xl text-xs transition-colors shadow-sm"
-                  >
-                    Add Classroom
-                  </button>
-                </form>
-              </div>
-
-              <div className="lg:col-span-2 border border-slate-100 rounded-2xl overflow-hidden">
-                <table className="w-full text-left text-xs border-collapse">
-                  <thead>
-                    <tr className="bg-slate-50 border-b border-slate-100 text-slate-500 font-bold">
-                      <th className="p-4">Room Number</th>
-                      <th className="p-4">Category</th>
-                      <th className="p-4">Capacity</th>
-                      <th className="p-4 text-center">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {rooms.map((r) => (
-                      <tr key={r.id} className="hover:bg-slate-50/50">
-                        <td className="p-4 font-bold text-slate-800 font-mono">Room {r.roomNumber}</td>
-                        <td className="p-4">
-                          <span className={`px-2 py-0.5 rounded text-[10px] font-semibold border ${
-                            r.type === 'Lab'
-                              ? 'bg-purple-50 border-purple-100 text-purple-700'
-                              : r.type === 'Seminar'
-                              ? 'bg-amber-50 border-amber-100 text-amber-700'
-                              : 'bg-blue-50 border-blue-100 text-blue-700'
-                          }`}>
-                            {r.type}
-                          </span>
-                        </td>
-                        <td className="p-4 font-mono text-slate-600 font-medium">{r.capacity} Seats</td>
-                        <td className="p-4 text-center">
-                          <button
-                            onClick={() => handleDeleteRoom(r.id, r.roomNumber)}
-                            className="p-1.5 hover:bg-red-50 text-slate-400 hover:text-red-600 rounded-lg transition-all"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* TAB 5: Mappings */}
-        {activeTab === 'mappings' && (
-          <div className="space-y-6">
-            <div>
-              <h3 className="text-sm font-bold text-slate-800">Faculty Course Assignment Maps</h3>
-              <p className="text-xs text-slate-500 mt-1">
-                Pair up instructors with specific subject courses they are qualified to teach.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100 h-fit">
-                <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-4 flex items-center gap-1.5">
-                  <Plus className="w-4 h-4 text-blue-600" />
-                  Define Mappings
-                </h4>
-                <form onSubmit={handleAddMapping} className="space-y-4">
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-600 mb-1">Select Instructor *</label>
-                    <select
-                      value={newMapping.facultyId}
-                      onChange={e => setNewMapping({ ...newMapping, facultyId: e.target.value })}
-                      className="w-full text-xs p-3 rounded-xl border border-slate-200 bg-white focus:outline-blue-600"
-                    >
-                      <option value="">-- Choose Instructor --</option>
-                      {faculty.map(f => (
-                        <option key={f.id} value={f.id}>{f.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-600 mb-1">Filter Course list by Semester</label>
-                    <select
-                      value={selectedSemesterFilterMapping}
-                      onChange={e => setSelectedSemesterFilterMapping(e.target.value)}
-                      className="w-full text-xs p-3 rounded-xl border border-slate-200 bg-white focus:outline-blue-600"
-                    >
-                      <option value="all">All Semesters</option>
-                      <option value="1">Semester I</option>
-                      <option value="2">Semester II</option>
-                      <option value="3">Semester III</option>
-                      <option value="4">Semester IV</option>
-                      <option value="5">Semester V</option>
-                      <option value="6">Semester VI</option>
-                      <option value="7">Semester VII</option>
-                      <option value="8">Semester VIII</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-600 mb-1">Select Course Syllabus *</label>
-                    <select
-                      value={newMapping.courseId}
-                      onChange={e => setNewMapping({ ...newMapping, courseId: e.target.value })}
-                      className="w-full text-xs p-3 rounded-xl border border-slate-200 bg-white focus:outline-blue-600"
-                    >
-                      <option value="">-- Choose Course --</option>
-                      {(selectedSemesterFilterMapping === 'all'
-                        ? courses
-                        : filterCoursesBySemester(courses, semesterCourseMaps, Number(selectedSemesterFilterMapping))
-                      ).map(c => (
-                        <option key={c.id} value={c.id}>[{c.courseCode}] {c.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <button
-                    type="submit"
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-xl text-xs transition-colors shadow-sm"
-                  >
-                    Define Mapping Link
-                  </button>
-                </form>
-              </div>
-
-              <div className="lg:col-span-2 border border-slate-100 rounded-2xl overflow-hidden max-h-[450px] overflow-y-auto">
-                <table className="w-full text-left text-xs border-collapse">
-                  <thead>
-                    <tr className="bg-slate-50 border-b border-slate-100 text-slate-500 font-bold sticky top-0 z-10">
-                      <th className="p-4">Faculty Name</th>
-                      <th className="p-4">Syllabus Course</th>
-                      <th className="p-4 text-center">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {mappings.map((m) => {
-                      const f = faculty.find(fac => fac.id === m.facultyId);
-                      const c = courses.find(crs => crs.id === m.courseId);
-
-                      return (
-                        <tr key={m.id} className="hover:bg-slate-50/50">
-                          <td className="p-4 font-bold text-slate-800">{f ? f.name : 'Unknown Faculty'}</td>
-                          <td className="p-4 font-medium text-slate-700">
-                            {c ? `[${c.courseCode}] ${c.name}` : 'Unknown Course'}
+                        return (
+                          <tr key={f.id} className="hover:bg-slate-50/50 transition-all">
+                            <td className="p-4 space-y-1">
+                              <div className="font-bold text-slate-800 text-sm">{f.name}</div>
+                              <div className="flex flex-wrap gap-1 items-center">
+                                {f.designation && (
+                                  <span className="px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-100 text-[9px] font-semibold">
+                                    {f.designation}
+                                  </span>
+                                )}
+                                {f.division && (
+                                  <span className="px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 border border-blue-100 text-[9px] font-semibold">
+                                    Dept: {f.division}
+                                  </span>
+                                )}
+                                {f.specialization && (
+                                  <span className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 border border-slate-200 text-[9px] font-semibold">
+                                    Spec: {f.specialization}
+                                  </span>
+                                )}
+                                {!f.designation && !f.division && !f.specialization && (
+                                  <span className="text-[10px] text-slate-400 italic">No additional details</span>
+                                )}
+                              </div>
+                            </td>
+                            <td className="p-4">
+                              {mappedCourses.length === 0 ? (
+                                <span className="text-[10px] text-slate-400 italic">None assigned yet</span>
+                              ) : (
+                                <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto max-w-xs pr-1 custom-scrollbar">
+                                  {mappedCourses.map(c => (
+                                    <span key={c.id} className="px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-100 text-[9px] font-bold inline-block" title={c.name}>
+                                      {c.courseCode}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                            </td>
+                            <td className="p-4 space-y-0.5">
+                              <div className="font-mono text-slate-500 font-medium">{f.phone}</div>
+                              <div className="text-[10px] text-slate-600">
+                                Max Load: <strong className="text-blue-600">{f.maxHoursPerDay} hrs/day</strong>
+                              </div>
+                            </td>
+                            <td className="p-4 text-center">
+                              <div className="flex justify-center items-center gap-1.5">
+                                <button
+                                  onClick={() => handleStartEditFaculty(f)}
+                                  className="p-1.5 hover:bg-blue-50 text-blue-500 hover:text-blue-700 rounded-lg transition-all border border-transparent hover:border-blue-100 cursor-pointer"
+                                  title="Edit Faculty details & courses"
+                                >
+                                  <Edit2 className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteFaculty(f.id, f.name)}
+                                  className="p-1.5 hover:bg-red-50 text-slate-400 hover:text-red-600 rounded-lg transition-all border border-transparent hover:border-red-100 cursor-pointer"
+                                  title="Delete Faculty member"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                      {filteredFaculty.length === 0 && (
+                        <tr>
+                          <td colSpan={4} className="p-8 text-center text-slate-400">
+                            No faculty members match your search criteria.
                           </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* TAB 3: Syllabus Catalog */}
+        {activeTab === 'courses' && (() => {
+          const filteredCourses = courses.filter(c => {
+            const matchesQuery = !courseSearchQuery.trim() ||
+              c.courseCode.toLowerCase().includes(courseSearchQuery.toLowerCase()) ||
+              c.name.toLowerCase().includes(courseSearchQuery.toLowerCase());
+            const matchesType = courseTypeFilter === 'all' || c.type === courseTypeFilter;
+            return matchesQuery && matchesType;
+          });
+
+          return (
+            <div className="space-y-6">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                <div>
+                  <h3 className="text-sm font-bold text-slate-800">Academic Syllabus Course Catalog</h3>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Establish subject course listings, credit values, and daily slot hour durations.
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="relative">
+                    <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
+                    <input
+                      type="text"
+                      placeholder="Search courses..."
+                      value={courseSearchQuery}
+                      onChange={(e) => setCourseSearchQuery(e.target.value)}
+                      className="text-xs pl-8 pr-3 py-1.5 rounded-xl border border-slate-200 bg-white focus:outline-blue-600 w-44"
+                    />
+                    {courseSearchQuery && (
+                      <button onClick={() => setCourseSearchQuery('')} className="absolute right-2.5 top-2 text-slate-400 hover:text-slate-600">
+                        <X className="w-3 h-3" />
+                      </button>
+                    )}
+                  </div>
+                  <select
+                    value={courseTypeFilter}
+                    onChange={(e) => setCourseTypeFilter(e.target.value)}
+                    className="text-xs py-1.5 px-3 rounded-xl border border-slate-200 bg-white text-slate-700 font-semibold focus:outline-blue-600"
+                  >
+                    <option value="all">All Types</option>
+                    <option value="Theory">Theory</option>
+                    <option value="Lab">Lab</option>
+                    <option value="Long Duration">Long Duration</option>
+                    <option value="Non-Academic">Non-Academic</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100 h-fit">
+                  <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-4 flex items-center gap-1.5">
+                    <Plus className="w-4 h-4 text-blue-600" />
+                    Add Course Syllabus
+                  </h4>
+                  <form onSubmit={handleAddCourse} className="space-y-4">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-600 mb-1">Subject Code *</label>
+                        <input
+                          type="text"
+                          placeholder="Subject Code"
+                          value={newCourse.courseCode}
+                          onChange={e => setNewCourse({ ...newCourse, courseCode: e.target.value })}
+                          className="w-full text-xs p-3 rounded-xl border border-slate-200 bg-white focus:outline-blue-600"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-600 mb-1">Credits</label>
+                        <input
+                          type="number"
+                          step={0.5}
+                          value={newCourse.credits}
+                          onChange={e => setNewCourse({ ...newCourse, credits: Number(e.target.value) })}
+                          className="w-full text-xs p-3 rounded-xl border border-slate-200 bg-white focus:outline-blue-600"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-600 mb-1">Subject Name *</label>
+                      <input
+                        type="text"
+                        placeholder="Subject Name"
+                        value={newCourse.name}
+                        onChange={e => setNewCourse({ ...newCourse, name: e.target.value })}
+                        className="w-full text-xs p-3 rounded-xl border border-slate-200 bg-white focus:outline-blue-600"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-600 mb-1">Type</label>
+                        <select
+                          value={newCourse.type}
+                          onChange={e => {
+                            const type = e.target.value as Course['type'];
+                            const durationSlots = type === 'Lab' ? 2 : type === 'Long Duration' ? 4 : 1;
+                            setNewCourse({ ...newCourse, type, durationSlots });
+                          }}
+                          className="w-full text-xs p-3 rounded-xl border border-slate-200 bg-white focus:outline-blue-600"
+                        >
+                          <option value="Theory">Theory</option>
+                          <option value="Lab">Lab (2 hours)</option>
+                          <option value="Long Duration">Long Duration</option>
+                          <option value="Non-Academic">Non-Academic</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-600 mb-1">Consecutive Slots</label>
+                        <input
+                          type="number"
+                          value={newCourse.durationSlots}
+                          onChange={e => setNewCourse({ ...newCourse, durationSlots: Number(e.target.value) })}
+                          className="w-full text-xs p-3 rounded-xl border border-slate-200 bg-white focus:outline-blue-600"
+                        />
+                      </div>
+                    </div>
+                    <button
+                      type="submit"
+                      className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-xl text-xs transition-colors shadow-sm cursor-pointer"
+                    >
+                      Add Syllabus Course
+                    </button>
+                  </form>
+                </div>
+
+                <div className="lg:col-span-2 border border-slate-100 rounded-2xl overflow-hidden max-h-[520px] overflow-y-auto custom-scrollbar bg-white shadow-xs">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead>
+                      <tr className="bg-slate-50 border-b border-slate-100 text-slate-500 font-bold sticky top-0 z-10">
+                        <th className="p-4">Subject Code ({filteredCourses.length})</th>
+                        <th className="p-4">Subject Name</th>
+                        <th className="p-4">Type</th>
+                        <th className="p-4">Credits</th>
+                        <th className="p-4 text-center">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {filteredCourses.map((c) => (
+                        <tr key={c.id} className="hover:bg-slate-50/50 transition-all">
+                          <td className="p-4 font-mono font-bold text-blue-600">{c.courseCode}</td>
+                          <td className="p-4 font-medium text-slate-800">{c.name}</td>
+                          <td className="p-4">
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-semibold border ${
+                              c.type === 'Lab'
+                                ? 'bg-purple-50 border-purple-100 text-purple-700'
+                                : c.type === 'Long Duration'
+                                ? 'bg-emerald-50 border-emerald-100 text-emerald-700'
+                                : c.type === 'Non-Academic'
+                                ? 'bg-amber-50 border-amber-100 text-amber-700'
+                                : 'bg-blue-50 border-blue-100 text-blue-700'
+                            }`}>
+                              {c.type} ({c.durationSlots} {c.durationSlots > 1 ? 'hrs' : 'hr'})
+                            </span>
+                          </td>
+                          <td className="p-4 font-mono text-slate-600 font-medium">{c.credits}</td>
                           <td className="p-4 text-center">
                             <button
-                              onClick={() => handleDeleteMapping(m.id)}
-                              className="p-1.5 hover:bg-red-50 text-slate-400 hover:text-red-600 rounded-lg transition-all"
+                              onClick={() => handleDeleteCourse(c.id, c.name)}
+                              className="p-1.5 hover:bg-red-50 text-slate-400 hover:text-red-600 rounded-lg transition-all cursor-pointer"
                             >
                               <Trash2 className="w-4 h-4" />
                             </button>
                           </td>
                         </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+                      ))}
+                      {filteredCourses.length === 0 && (
+                        <tr>
+                          <td colSpan={5} className="p-8 text-center text-slate-400">
+                            No courses match your search criteria.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
+
+        {/* TAB 4: Classrooms */}
+        {activeTab === 'rooms' && (() => {
+          const filteredRooms = rooms.filter(r => {
+            const matchesQuery = !roomSearchQuery.trim() ||
+              r.roomNumber.toLowerCase().includes(roomSearchQuery.toLowerCase());
+            const matchesType = roomTypeFilter === 'all' || r.type === roomTypeFilter;
+            return matchesQuery && matchesType;
+          });
+
+          return (
+            <div className="space-y-6">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                <div>
+                  <h3 className="text-sm font-bold text-slate-800">Classroom Assignment Registry</h3>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Maintain room numbers, physical room categories, and student seating capacities.
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="relative">
+                    <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
+                    <input
+                      type="text"
+                      placeholder="Search room..."
+                      value={roomSearchQuery}
+                      onChange={(e) => setRoomSearchQuery(e.target.value)}
+                      className="text-xs pl-8 pr-3 py-1.5 rounded-xl border border-slate-200 bg-white focus:outline-blue-600 w-40"
+                    />
+                    {roomSearchQuery && (
+                      <button onClick={() => setRoomSearchQuery('')} className="absolute right-2.5 top-2 text-slate-400 hover:text-slate-600">
+                        <X className="w-3 h-3" />
+                      </button>
+                    )}
+                  </div>
+                  <select
+                    value={roomTypeFilter}
+                    onChange={(e) => setRoomTypeFilter(e.target.value)}
+                    className="text-xs py-1.5 px-3 rounded-xl border border-slate-200 bg-white text-slate-700 font-semibold focus:outline-blue-600"
+                  >
+                    <option value="all">All Categories</option>
+                    <option value="Theory">Theory</option>
+                    <option value="Lab">Lab</option>
+                    <option value="Seminar">Seminar</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100 h-fit">
+                  <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-4 flex items-center gap-1.5">
+                    <Plus className="w-4 h-4 text-blue-600" />
+                    Add Classroom
+                  </h4>
+                  <form onSubmit={handleAddRoom} className="space-y-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-600 mb-1">Room Code / Number *</label>
+                      <input
+                        type="text"
+                        placeholder="Room Code / Number"
+                        value={newRoom.roomNumber}
+                        onChange={e => setNewRoom({ ...newRoom, roomNumber: e.target.value })}
+                        className="w-full text-xs p-3 rounded-xl border border-slate-200 bg-white focus:outline-blue-600"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-600 mb-1">Room Category</label>
+                      <select
+                        value={newRoom.type}
+                        onChange={e => setNewRoom({ ...newRoom, type: e.target.value as Room['type'] })}
+                        className="w-full text-xs p-3 rounded-xl border border-slate-200 bg-white focus:outline-blue-600"
+                      >
+                        <option value="Theory">Theory Classroom</option>
+                        <option value="Lab">Syllabus Laboratory</option>
+                        <option value="Seminar">Seminar Auditorium</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-600 mb-1">Student Seating Capacity</label>
+                      <input
+                        type="number"
+                        value={newRoom.capacity}
+                        onChange={e => setNewRoom({ ...newRoom, capacity: Number(e.target.value) })}
+                        className="w-full text-xs p-3 rounded-xl border border-slate-200 bg-white focus:outline-blue-600"
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-xl text-xs transition-colors shadow-sm cursor-pointer"
+                    >
+                      Add Classroom
+                    </button>
+                  </form>
+                </div>
+
+                <div className="lg:col-span-2 border border-slate-100 rounded-2xl overflow-hidden max-h-[520px] overflow-y-auto custom-scrollbar bg-white shadow-xs">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead>
+                      <tr className="bg-slate-50 border-b border-slate-100 text-slate-500 font-bold sticky top-0 z-10">
+                        <th className="p-4">Room Number ({filteredRooms.length})</th>
+                        <th className="p-4">Category</th>
+                        <th className="p-4">Capacity</th>
+                        <th className="p-4 text-center">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {filteredRooms.map((r) => (
+                        <tr key={r.id} className="hover:bg-slate-50/50 transition-all">
+                          <td className="p-4 font-bold text-slate-800 font-mono">Room {r.roomNumber}</td>
+                          <td className="p-4">
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-semibold border ${
+                              r.type === 'Lab'
+                                ? 'bg-purple-50 border-purple-100 text-purple-700'
+                                : r.type === 'Seminar'
+                                ? 'bg-amber-50 border-amber-100 text-amber-700'
+                                : 'bg-blue-50 border-blue-100 text-blue-700'
+                            }`}>
+                              {r.type}
+                            </span>
+                          </td>
+                          <td className="p-4 font-mono text-slate-600 font-medium">{r.capacity} Seats</td>
+                          <td className="p-4 text-center">
+                            <button
+                              onClick={() => handleDeleteRoom(r.id, r.roomNumber)}
+                              className="p-1.5 hover:bg-red-50 text-slate-400 hover:text-red-600 rounded-lg transition-all cursor-pointer"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                      {filteredRooms.length === 0 && (
+                        <tr>
+                          <td colSpan={4} className="p-8 text-center text-slate-400">
+                            No rooms match your search criteria.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* TAB 5: Mappings */}
+        {activeTab === 'mappings' && (() => {
+          const departments = Array.from(new Set(faculty.map(f => f.division).filter(Boolean)));
+
+          const filteredMappings = mappings.filter(m => {
+            const f = faculty.find(fac => fac.id === m.facultyId);
+            const c = courses.find(crs => crs.id === m.courseId);
+            const matchesDept = mappingDeptFilter === 'all' || f?.division === mappingDeptFilter;
+            if (!mappingSearchQuery.trim()) return matchesDept;
+            const q = mappingSearchQuery.toLowerCase();
+            const matchesSearch = (f && f.name.toLowerCase().includes(q)) || 
+                                  (c && (c.name.toLowerCase().includes(q) || c.courseCode.toLowerCase().includes(q)));
+            return matchesDept && matchesSearch;
+          });
+
+          return (
+            <div className="space-y-6">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                <div>
+                  <h3 className="text-sm font-bold text-slate-800">Faculty Course Assignment Maps</h3>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Pair up instructors with specific subject courses they are qualified to teach.
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <select
+                    value={mappingDeptFilter}
+                    onChange={(e) => setMappingDeptFilter(e.target.value)}
+                    className="text-xs px-3 py-1.5 rounded-xl border border-slate-200 bg-white font-bold text-slate-700 focus:outline-blue-600 cursor-pointer"
+                  >
+                    <option value="all">All Divisions ({mappings.length})</option>
+                    {departments.map((dept) => {
+                      const count = mappings.filter(m => {
+                        const f = faculty.find(fac => fac.id === m.facultyId);
+                        return f?.division === dept;
+                      }).length;
+                      return (
+                        <option key={dept} value={dept}>
+                          {dept} ({count})
+                        </option>
+                      );
+                    })}
+                  </select>
+
+                  <div className="relative">
+                    <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
+                    <input
+                      type="text"
+                      placeholder="Search mappings..."
+                      value={mappingSearchQuery}
+                      onChange={(e) => setMappingSearchQuery(e.target.value)}
+                      className="text-xs pl-8 pr-3 py-1.5 rounded-xl border border-slate-200 bg-white focus:outline-blue-600 w-48"
+                    />
+                    {mappingSearchQuery && (
+                      <button onClick={() => setMappingSearchQuery('')} className="absolute right-2.5 top-2 text-slate-400 hover:text-slate-600">
+                        <X className="w-3 h-3" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100 h-fit">
+                  <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-4 flex items-center gap-1.5">
+                    <Plus className="w-4 h-4 text-blue-600" />
+                    Define Mappings
+                  </h4>
+                  <form onSubmit={handleAddMapping} className="space-y-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-600 mb-1">Select Instructor *</label>
+                      <select
+                        value={newMapping.facultyId}
+                        onChange={e => setNewMapping({ ...newMapping, facultyId: e.target.value })}
+                        className="w-full text-xs p-3 rounded-xl border border-slate-200 bg-white focus:outline-blue-600"
+                      >
+                        <option value="">-- Choose Instructor --</option>
+                        {faculty.map(f => (
+                          <option key={f.id} value={f.id}>{f.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-600 mb-1">Filter Course list by Semester</label>
+                      <select
+                        value={selectedSemesterFilterMapping}
+                        onChange={e => setSelectedSemesterFilterMapping(e.target.value)}
+                        className="w-full text-xs p-3 rounded-xl border border-slate-200 bg-white focus:outline-blue-600"
+                      >
+                        <option value="all">All Semesters</option>
+                        <option value="1">Semester I</option>
+                        <option value="2">Semester II</option>
+                        <option value="3">Semester III</option>
+                        <option value="4">Semester IV</option>
+                        <option value="5">Semester V</option>
+                        <option value="6">Semester VI</option>
+                        <option value="7">Semester VII</option>
+                        <option value="8">Semester VIII</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-600 mb-1">Select Course Syllabus *</label>
+                      <select
+                        value={newMapping.courseId}
+                        onChange={e => setNewMapping({ ...newMapping, courseId: e.target.value })}
+                        className="w-full text-xs p-3 rounded-xl border border-slate-200 bg-white focus:outline-blue-600"
+                      >
+                        <option value="">-- Choose Course --</option>
+                        {(selectedSemesterFilterMapping === 'all'
+                          ? courses
+                          : filterCoursesBySemester(courses, semesterCourseMaps, Number(selectedSemesterFilterMapping))
+                        ).map(c => (
+                          <option key={c.id} value={c.id}>[{c.courseCode}] {c.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <button
+                      type="submit"
+                      className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-xl text-xs transition-colors shadow-sm cursor-pointer"
+                    >
+                      Define Mapping Link
+                    </button>
+                  </form>
+                </div>
+
+                <div className="lg:col-span-2 border border-slate-100 rounded-2xl overflow-hidden max-h-[520px] overflow-y-auto custom-scrollbar bg-white shadow-xs">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead>
+                      <tr className="bg-slate-50 border-b border-slate-100 text-slate-500 font-bold sticky top-0 z-10">
+                        <th className="p-4">Faculty Name ({filteredMappings.length})</th>
+                        <th className="p-4">Syllabus Course</th>
+                        <th className="p-4 text-center">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {filteredMappings.map((m) => {
+                        const f = faculty.find(fac => fac.id === m.facultyId);
+                        const c = courses.find(crs => crs.id === m.courseId);
+
+                        return (
+                          <tr key={m.id} className="hover:bg-slate-50/50 transition-all">
+                            <td className="p-4 font-bold text-slate-800">{f ? f.name : 'Unknown Faculty'}</td>
+                            <td className="p-4 font-medium text-slate-700">
+                              {c ? `[${c.courseCode}] ${c.name}` : 'Unknown Course'}
+                            </td>
+                            <td className="p-4 text-center">
+                              <button
+                                onClick={() => handleDeleteMapping(m.id)}
+                                className="p-1.5 hover:bg-red-50 text-slate-400 hover:text-red-600 rounded-lg transition-all cursor-pointer"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                      {filteredMappings.length === 0 && (
+                        <tr>
+                          <td colSpan={3} className="p-8 text-center text-slate-400">
+                            No mappings match your search criteria.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
 
         {/* TAB 5.5: Semester Curriculum & Faculty Mapping Master Planner */}
         {activeTab === 'curriculum' && (
@@ -1869,12 +2310,6 @@ export default function AdminPanel({
               {/* Left 2 columns: Curriculum & Assignments */}
               <div className="lg:col-span-2 space-y-4">
                 <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xs">
-                  <div className="border-b border-slate-200 bg-slate-50 p-4 px-6">
-                    <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-                      Subject Curriculum & Faculty Mapping List
-                    </h4>
-                  </div>
-                  
                   {/* List items */}
                   {(() => {
                     const activeCourseIds = Array.from(new Set(
@@ -1885,100 +2320,110 @@ export default function AdminPanel({
                     
                     const activeCourses = courses.filter(c => activeCourseIds.includes(c.id));
                     
-                    if (activeCourses.length === 0) {
-                      return (
-                        <div className="py-12 text-center space-y-2">
-                          <BookOpen className="w-8 h-8 text-slate-300 mx-auto" />
-                          <p className="text-xs text-slate-500 font-medium">No subjects added to Semester {selectedSemesterPlanner}'s active curriculum yet.</p>
-                          <button
-                            onClick={handleResetToStandardSyllabus}
-                            className="text-xs bg-blue-50 hover:bg-blue-100/50 text-blue-600 font-bold px-3 py-1.5 rounded-xl border border-blue-100 transition-colors cursor-pointer"
-                          >
-                            Load Standard Preset Subjects
-                          </button>
-                        </div>
-                      );
-                    }
-                    
                     return (
-                      <div className="divide-y divide-slate-100">
-                        {activeCourses.map((course) => {
-                          const assignedMap = mappings.find(m => m.courseId === course.id);
-                          const assignedFacultyId = assignedMap ? assignedMap.facultyId : '';
-                          const mappedFaculty = faculty.find(f => f.id === assignedFacultyId);
-                          
-                          // Find qualified faculty members who are mapped to teach this course by default
-                          const qualifiedFaculty = faculty.filter(f => 
-                            mappings.some(m => m.courseId === course.id && m.facultyId === f.id)
-                          );
-                          
-                          const courseMap = semesterCourseMaps.find(
-                            m => m.semester === selectedSemesterPlanner && m.courseId === course.id
-                          );
-                          
-                          return (
-                            <div key={course.id} className="p-4 px-6 hover:bg-slate-50/30 transition-colors flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                              <div className="space-y-1 max-w-sm">
-                                <div className="flex items-center gap-2">
-                                  <span className="font-mono text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-100 px-1.5 py-0.5 rounded">
-                                    {course.courseCode}
-                                  </span>
-                                  <span className={`px-2 py-0.5 rounded text-[9px] font-semibold border ${
-                                    course.type === 'Lab'
-                                      ? 'bg-purple-50 border-purple-100 text-purple-700'
-                                      : course.type === 'Long Duration'
-                                      ? 'bg-emerald-50 border-emerald-100 text-emerald-700'
-                                      : 'bg-blue-50 border-blue-100 text-blue-700'
-                                  }`}>
-                                    {course.type}
-                                  </span>
-                                  {courseMap && (courseMap.L !== undefined || courseMap.T !== undefined || courseMap.P !== undefined) && (
-                                    <span className="font-mono text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-100 px-1.5 py-0.5 rounded" title="Lecture-Tutorial-Practical hours per week">
-                                      LTP: {courseMap.L || 0}-{courseMap.T || 0}-{courseMap.P || 0}
-                                    </span>
-                                  )}
-                                </div>
-                                <h5 className="text-xs font-bold text-slate-800">{course.name}</h5>
-                                <p className="text-[10px] text-slate-500 font-medium">
-                                  Duration: {course.durationSlots} slots ({course.durationSlots} hrs) • Credits: {course.credits}
-                                </p>
-                              </div>
+                      <>
+                        <div className="border-b border-slate-200 bg-slate-50/95 backdrop-blur-xs p-4 px-6 flex items-center justify-between sticky top-0 z-10">
+                          <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-2">
+                            <BookOpen className="w-4 h-4 text-blue-600" />
+                            Subject Curriculum & Faculty Mapping List
+                          </h4>
+                          <span className="text-[11px] font-bold bg-blue-50 text-blue-700 border border-blue-200/70 px-2.5 py-0.5 rounded-full font-mono">
+                            {activeCourses.length} Subjects
+                          </span>
+                        </div>
+
+                        {activeCourses.length === 0 ? (
+                          <div className="py-12 text-center space-y-2">
+                            <BookOpen className="w-8 h-8 text-slate-300 mx-auto" />
+                            <p className="text-xs text-slate-500 font-medium">No subjects added to Semester {selectedSemesterPlanner}'s active curriculum yet.</p>
+                            <button
+                              onClick={handleResetToStandardSyllabus}
+                              className="text-xs bg-blue-50 hover:bg-blue-100/50 text-blue-600 font-bold px-3 py-1.5 rounded-xl border border-blue-100 transition-colors cursor-pointer"
+                            >
+                              Load Standard Preset Subjects
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="divide-y divide-slate-100 max-h-[520px] overflow-y-auto custom-scrollbar">
+                            {activeCourses.map((course) => {
+                              const assignedMap = mappings.find(m => m.courseId === course.id);
+                              const assignedFacultyId = assignedMap ? assignedMap.facultyId : '';
+                              const mappedFaculty = faculty.find(f => f.id === assignedFacultyId);
                               
-                              <div className="flex items-center gap-3 w-full md:w-auto shrink-0">
-                                <div className="space-y-1 flex-1 md:flex-none">
-                                  <label className="block text-[10px] text-slate-400 font-semibold uppercase">
-                                    Assigned Instructor
-                                  </label>
-                                  <select
-                                    value={assignedFacultyId}
-                                    onChange={(e) => handleAssignFacultyPlanner(course.id, e.target.value)}
-                                    className="text-xs p-2.5 rounded-xl border border-slate-200 bg-white focus:outline-blue-600 w-full md:w-56"
-                                  >
-                                    <option value="">-- No Instructor Assigned --</option>
-                                    {faculty.map((f) => {
-                                      const isQualified = qualifiedFaculty.some(q => q.id === f.id);
-                                      const load = getFacultyWeeklyLoad(f.id);
-                                      return (
-                                        <option key={f.id} value={f.id}>
-                                          {isQualified ? '⭐ ' : ''}{f.name} ({load} hrs/week)
-                                        </option>
-                                      );
-                                    })}
-                                  </select>
+                              // Find qualified faculty members who are mapped to teach this course by default
+                              const qualifiedFaculty = faculty.filter(f => 
+                                mappings.some(m => m.courseId === course.id && m.facultyId === f.id)
+                              );
+                              
+                              const courseMap = semesterCourseMaps.find(
+                                m => m.semester === selectedSemesterPlanner && m.courseId === course.id
+                              );
+                              
+                              return (
+                                <div key={course.id} className="p-4 px-6 hover:bg-slate-50/30 transition-colors flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                                  <div className="space-y-1 max-w-sm">
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-mono text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-100 px-1.5 py-0.5 rounded">
+                                        {course.courseCode}
+                                      </span>
+                                      <span className={`px-2 py-0.5 rounded text-[9px] font-semibold border ${
+                                        course.type === 'Lab'
+                                          ? 'bg-purple-50 border-purple-100 text-purple-700'
+                                          : course.type === 'Long Duration'
+                                          ? 'bg-emerald-50 border-emerald-100 text-emerald-700'
+                                          : 'bg-blue-50 border-blue-100 text-blue-700'
+                                      }`}>
+                                        {course.type}
+                                      </span>
+                                      {courseMap && (courseMap.L !== undefined || courseMap.T !== undefined || courseMap.P !== undefined) && (
+                                        <span className="font-mono text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-100 px-1.5 py-0.5 rounded" title="Lecture-Tutorial-Practical hours per week">
+                                          LTP: {courseMap.L || 0}-{courseMap.T || 0}-{courseMap.P || 0}
+                                        </span>
+                                      )}
+                                    </div>
+                                    <h5 className="text-xs font-bold text-slate-800">{course.name}</h5>
+                                    <p className="text-[10px] text-slate-500 font-medium">
+                                      Duration: {course.durationSlots} slots ({course.durationSlots} hrs) • Credits: {course.credits}
+                                    </p>
+                                  </div>
+                                  
+                                  <div className="flex items-center gap-3 w-full md:w-auto shrink-0">
+                                    <div className="space-y-1 flex-1 md:flex-none">
+                                      <label className="block text-[10px] text-slate-400 font-semibold uppercase">
+                                        Assigned Instructor
+                                      </label>
+                                      <select
+                                        value={assignedFacultyId}
+                                        onChange={(e) => handleAssignFacultyPlanner(course.id, e.target.value)}
+                                        className="text-xs p-2.5 rounded-xl border border-slate-200 bg-white focus:outline-blue-600 w-full md:w-56"
+                                      >
+                                        <option value="">-- No Instructor Assigned --</option>
+                                        {faculty.map((f) => {
+                                          const isQualified = qualifiedFaculty.some(q => q.id === f.id);
+                                          const load = getFacultyWeeklyLoad(f.id);
+                                          return (
+                                            <option key={f.id} value={f.id}>
+                                              {isQualified ? '⭐ ' : ''}{f.name} ({load} hrs/week)
+                                            </option>
+                                          );
+                                        })}
+                                      </select>
+                                    </div>
+                                    
+                                    <button
+                                      onClick={() => handleRemoveCourseFromSemesterPlanner(course.id)}
+                                      className="p-2.5 bg-slate-50 hover:bg-rose-50 border border-slate-100 hover:border-rose-150 text-slate-400 hover:text-rose-600 rounded-xl transition-all cursor-pointer mt-5"
+                                      title="Remove from current semester curriculum"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  </div>
                                 </div>
-                                
-                                <button
-                                  onClick={() => handleRemoveCourseFromSemesterPlanner(course.id)}
-                                  className="p-2.5 bg-slate-50 hover:bg-rose-50 border border-slate-100 hover:border-rose-150 text-slate-400 hover:text-rose-600 rounded-xl transition-all cursor-pointer mt-5"
-                                  title="Remove from current semester curriculum"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </button>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </>
                     );
                   })()}
                 </div>
@@ -2005,7 +2450,7 @@ export default function AdminPanel({
                       />
                     </div>
                     
-                    <div className="max-h-48 overflow-y-auto border border-slate-200 rounded-xl bg-white divide-y divide-slate-100 scrollbar-thin">
+                    <div className="max-h-48 overflow-y-auto border border-slate-200 rounded-xl bg-white divide-y divide-slate-100 custom-scrollbar">
                       {(() => {
                         const activeCourseIds = semesterCourseMaps
                           .filter(m => m.semester === selectedSemesterPlanner)
@@ -2063,7 +2508,7 @@ export default function AdminPanel({
                     These are standard courses matching the university syllabus guidelines for Semester {selectedSemesterPlanner}. Click the add icon to quickly incorporate them.
                   </p>
                   
-                  <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                  <div className="space-y-2 max-h-56 overflow-y-auto pr-1 custom-scrollbar">
                     {(() => {
                       const standardPresetIds = DEFAULT_SEM_COURSES[selectedSemesterPlanner] || [];
                       const activeCourseIds = semesterCourseMaps

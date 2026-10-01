@@ -1,6 +1,6 @@
-import React, { useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine, Cell } from 'recharts';
-import { Users, Clock, AlertTriangle, CheckCircle, Flame, Sparkles } from 'lucide-react';
+import { Users, Clock, AlertTriangle, CheckCircle, Flame, Sparkles, Filter } from 'lucide-react';
 import { Faculty, TimetableEntry, Course } from '../types';
 
 interface FacultyLoadDashboardProps {
@@ -10,9 +10,26 @@ interface FacultyLoadDashboardProps {
 }
 
 export default function FacultyLoadDashboard({ faculty, entries, courses }: FacultyLoadDashboardProps) {
-  // Calculate teaching load for each faculty
+  const [departmentFilter, setDepartmentFilter] = useState<string>('all');
+
+  // Distinct divisions / departments
+  const departments = useMemo(() => {
+    const set = new Set<string>();
+    faculty.forEach(f => {
+      if (f.division) set.add(f.division);
+    });
+    return Array.from(set);
+  }, [faculty]);
+
+  // Filtered faculty based on department
+  const filteredFacultyList = useMemo(() => {
+    if (departmentFilter === 'all') return faculty;
+    return faculty.filter(f => f.division === departmentFilter);
+  }, [faculty, departmentFilter]);
+
+  // Calculate teaching load for each faculty in filtered set
   const loadData = useMemo(() => {
-    return faculty.map(f => {
+    return filteredFacultyList.map(f => {
       // Find all scheduled entries for this faculty
       const assignedEntries = entries.filter(e => e.facultyId === f.id);
       
@@ -37,11 +54,11 @@ export default function FacultyLoadDashboard({ faculty, entries, courses }: Facu
         hours: parseFloat(totalHours.toFixed(1)),
       };
     });
-  }, [faculty, entries, courses]);
+  }, [filteredFacultyList, entries, courses]);
 
   // Summary Metrics
   const metrics = useMemo(() => {
-    const activeStaff = faculty.length;
+    const activeStaff = filteredFacultyList.length;
     const totalHoursScheduled = loadData.reduce((acc, curr) => acc + curr.hours, 0);
     const avgLoad = activeStaff > 0 ? totalHoursScheduled / activeStaff : 0;
     
@@ -63,7 +80,7 @@ export default function FacultyLoadDashboard({ faculty, entries, courses }: Facu
       zeroLoadFaculty,
       overloadedFaculty
     };
-  }, [faculty, loadData]);
+  }, [filteredFacultyList, loadData]);
 
   // Custom tooltips for recharts
   const CustomTooltip = ({ active, payload }: any) => {
@@ -148,13 +165,31 @@ export default function FacultyLoadDashboard({ faculty, entries, courses }: Facu
                 Calculated teaching hours based on 50-minute periods. Reference limit: 16 hrs (AICTE standard).
               </p>
             </div>
-            <div className="flex items-center gap-3 text-[10px] font-semibold text-slate-500">
-              <span className="flex items-center gap-1">
-                <span className="h-2 w-2 rounded bg-blue-500"></span> Normal Load
-              </span>
-              <span className="flex items-center gap-1">
-                <span className="h-2 w-2 rounded bg-rose-500"></span> Over Limit
-              </span>
+            <div className="flex items-center gap-3">
+              <select
+                value={departmentFilter}
+                onChange={(e) => setDepartmentFilter(e.target.value)}
+                className="bg-slate-50 border border-slate-200 text-xs font-bold text-slate-700 rounded-xl px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
+              >
+                <option value="all">All Divisions ({faculty.length})</option>
+                {departments.map((dept) => {
+                  const count = faculty.filter(f => f.division === dept).length;
+                  return (
+                    <option key={dept} value={dept}>
+                      {dept} ({count})
+                    </option>
+                  );
+                })}
+              </select>
+
+              <div className="hidden sm:flex items-center gap-2 text-[10px] font-semibold text-slate-500">
+                <span className="flex items-center gap-1">
+                  <span className="h-2 w-2 rounded bg-blue-500"></span> Normal
+                </span>
+                <span className="flex items-center gap-1">
+                  <span className="h-2 w-2 rounded bg-rose-500"></span> Over Limit
+                </span>
+              </div>
             </div>
           </div>
 

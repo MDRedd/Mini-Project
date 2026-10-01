@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Lock, Unlock, Trash2, Sparkles, X, Search, BookOpen, Microscope, Rocket, Award, Clock, ArrowLeftRight } from 'lucide-react';
-import { Day, SlotId, Course, TimetableEntry, Room, Faculty, Slot, SemesterCourseMap, FacultyCourseMapping, Batch } from '../types';
+import { Day, SlotId, Course, TimetableEntry, Room, Faculty, Slot, SemesterCourseMap, FacultyCourseMapping, Batch, AdminPermissions } from '../types';
 import { ACTIVE_SLOTS, getOccupiedSlots, validateSlotAvailability, filterCoursesBySemester } from '../utils/solver';
 import ConflictResolutionAssistant from './ConflictResolutionAssistant';
 
@@ -13,6 +13,9 @@ interface TimetableGridProps {
   allSlots: Slot[];
   days: Day[];
   isAdmin: boolean;
+  isSuperAdmin?: boolean;
+  isFrozen?: boolean;
+  adminPermissions?: AdminPermissions;
   activeBatchId: string;
   activeRoomId: string;
   preferredRoomId: string;
@@ -36,6 +39,9 @@ export default function TimetableGrid({
   allSlots,
   days,
   isAdmin,
+  isSuperAdmin = false,
+  isFrozen = false,
+  adminPermissions,
   activeBatchId,
   activeRoomId,
   preferredRoomId,
@@ -50,6 +56,11 @@ export default function TimetableGrid({
   allowThreeHourSessions = false,
   onClearGrid,
 }: TimetableGridProps) {
+  // Compute effective admin privileges (Super Admin bypasses freeze, Admin adheres to Super Admin's decided permissions)
+  const canEditSlots = isSuperAdmin || (isAdmin && !isFrozen && (adminPermissions ? adminPermissions.canEditTimetableSlots : true));
+  const canClearGrid = isSuperAdmin || (isAdmin && !isFrozen && (adminPermissions ? adminPermissions.canClearGrids : true));
+  const effectiveIsAdmin = canEditSlots;
+
   // Drag and Drop States
   const [draggedCourse, setDraggedCourse] = useState<Course | null>(null);
   const [draggedEntry, setDraggedEntry] = useState<TimetableEntry | null>(null);
@@ -79,37 +90,37 @@ export default function TimetableGrid({
     switch (type) {
       case 'Lab':
         return {
-          bg: 'bg-gradient-to-br from-purple-50/95 via-fuchsia-50/70 to-white hover:from-purple-100/95 hover:to-fuchsia-100/80 border-purple-200/90 shadow-2xs',
-          text: 'text-purple-950',
-          badge: 'bg-purple-100/90 text-purple-800 border-purple-200/80 font-extrabold',
-          borderAccent: 'border-l-3.5 border-l-purple-600',
+          bg: 'bg-[#ECFDF5] hover:bg-[#D1FAE5] border border-emerald-300/80 shadow-2xs',
+          text: 'text-[#065F46]',
+          badge: 'bg-emerald-100 text-[#065F46] border border-emerald-200 font-extrabold',
+          borderAccent: 'border-l-4 border-l-[#10B981]',
           icon: Microscope,
           label: 'Lab'
         };
       case 'Long Duration':
         return {
-          bg: 'bg-gradient-to-br from-emerald-50/95 via-teal-50/70 to-white hover:from-emerald-100/95 hover:to-teal-100/80 border-emerald-200/90 shadow-2xs',
-          text: 'text-emerald-950',
-          badge: 'bg-emerald-100/90 text-emerald-800 border-emerald-200/80 font-extrabold',
-          borderAccent: 'border-l-3.5 border-l-emerald-600',
+          bg: 'bg-[#F5F3FF] hover:bg-[#EDE9FE] border border-purple-300/80 shadow-2xs',
+          text: 'text-[#5B21B6]',
+          badge: 'bg-purple-100 text-[#5B21B6] border border-purple-200 font-extrabold',
+          borderAccent: 'border-l-4 border-l-[#8B5CF6]',
           icon: Rocket,
           label: 'Project'
         };
       case 'Non-Academic':
         return {
-          bg: 'bg-gradient-to-br from-amber-50/95 via-orange-50/70 to-white hover:from-amber-100/95 hover:to-orange-100/80 border-amber-200/90 shadow-2xs',
-          text: 'text-amber-950',
-          badge: 'bg-amber-100/90 text-amber-800 border-amber-200/80 font-extrabold',
-          borderAccent: 'border-l-3.5 border-l-amber-600',
+          bg: 'bg-[#FFF7ED] hover:bg-[#FFEDD5] border border-orange-300/80 shadow-2xs',
+          text: 'text-[#9A3412]',
+          badge: 'bg-orange-100 text-[#9A3412] border border-orange-200 font-extrabold',
+          borderAccent: 'border-l-4 border-l-[#F97316]',
           icon: Award,
           label: 'Activity'
         };
       default: // Theory
         return {
-          bg: 'bg-gradient-to-br from-indigo-50/95 via-blue-50/70 to-white hover:from-indigo-100/95 hover:to-blue-100/80 border-indigo-200/90 shadow-2xs',
-          text: 'text-indigo-950',
-          badge: 'bg-indigo-100/90 text-indigo-800 border-indigo-200/80 font-extrabold',
-          borderAccent: 'border-l-3.5 border-l-indigo-600',
+          bg: 'bg-[#EEF4FF] hover:bg-[#DBEAFE] border border-blue-300/80 shadow-2xs',
+          text: 'text-[#1E40AF]',
+          badge: 'bg-blue-100 text-[#1E40AF] border border-blue-200 font-extrabold',
+          borderAccent: 'border-l-4 border-l-[#3B82F6]',
           icon: BookOpen,
           label: 'Theory'
         };
@@ -174,7 +185,7 @@ export default function TimetableGrid({
 
   const handleDragOver = (e: React.DragEvent, day: Day, slotId: SlotId) => {
     e.preventDefault();
-    if (!isAdmin || !draggedCourse) return;
+    if (!effectiveIsAdmin || !draggedCourse) return;
     
     if (dragOverCell?.day !== day || dragOverCell?.slotId !== slotId) {
       setDragOverCell({ day, slotId });
@@ -183,7 +194,7 @@ export default function TimetableGrid({
 
   const handleDrop = (e: React.DragEvent, day: Day, slotId: SlotId) => {
     e.preventDefault();
-    if (!isAdmin || !draggedCourse) return;
+    if (!effectiveIsAdmin || !draggedCourse) return;
 
     const course = draggedCourse;
     const entryToMove = draggedEntry;
@@ -363,7 +374,7 @@ export default function TimetableGrid({
 
   const handleToggleLock = (entryId: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!isAdmin) return;
+    if (!effectiveIsAdmin) return;
 
     const updated = entries.map((entry) => {
       if (entry.id === entryId) {
@@ -383,7 +394,7 @@ export default function TimetableGrid({
 
   const handleDeleteEntry = (entryId: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!isAdmin) return;
+    if (!effectiveIsAdmin) return;
 
     const updated = entries.filter((entry) => entry.id !== entryId);
     onUpdateEntries(updated);
@@ -391,7 +402,7 @@ export default function TimetableGrid({
   };
 
   const handleCellClick = (day: Day, slotId: SlotId) => {
-    if (!isAdmin) return;
+    if (!effectiveIsAdmin) return;
 
     const existingEntry = entries.find(
       (e) => e.day === day && e.slotId === slotId && e.batchId === activeBatchId
@@ -519,7 +530,7 @@ export default function TimetableGrid({
             </div>
 
             {/* Interactive Conflict & Swap Assistant Toggle */}
-            {isAdmin && (
+            {effectiveIsAdmin && (
               <div className="flex items-center gap-2 print:hidden">
                 {onClearGrid && (
                   <button
@@ -754,7 +765,7 @@ export default function TimetableGrid({
                               layoutId={entry.id}
                               whileHover={entry.isLocked ? undefined : { y: -1, scale: 1.005 }}
                               whileTap={entry.isLocked ? undefined : { scale: 0.99 }}
-                              draggable={isAdmin && !entry.isLocked}
+                              draggable={effectiveIsAdmin && !entry.isLocked}
                               onDragStart={(e: any) => handleDragStartEntry(e, entry, course)}
                               onDragEnd={handleDragEnd}
                               className={`h-full relative p-2.5 rounded-2xl border transition-all group ${
@@ -799,7 +810,7 @@ export default function TimetableGrid({
                                       </span>
                                     </div>
 
-                                    {isAdmin && (
+                                    {effectiveIsAdmin && (
                                       <div className="flex items-center gap-0.5 bg-white/90 p-0.5 rounded-lg border border-slate-200 print:hidden">
                                         <button
                                           onClick={(e) => handleToggleLock(entry.id, e)}
@@ -834,7 +845,7 @@ export default function TimetableGrid({
                                       </span>
                                     </div>
 
-                                    {isAdmin && (
+                                    {effectiveIsAdmin && (
                                       <div className="flex items-center gap-0.5 opacity-80 group-hover:opacity-100 transition-opacity">
                                         <button
                                           onClick={(e) => {
@@ -888,7 +899,7 @@ export default function TimetableGrid({
                                       {course.courseCode}
                                     </span>
 
-                                    {isAdmin && (
+                                    {effectiveIsAdmin && (
                                       <div className="flex items-center gap-0.5 opacity-80 group-hover:opacity-100 transition-opacity">
                                         <button
                                           onClick={(e) => handleToggleLock(entry.id, e)}
@@ -933,7 +944,7 @@ export default function TimetableGrid({
                       const isHovered = dragOverCell?.day === day && dragOverCell?.slotId === activeSlotId;
                       
                       let isCompatible = false;
-                      if (draggedCourse && isAdmin) {
+                      if (draggedCourse && effectiveIsAdmin) {
                         const matchingFacultyId = allFaculty[0]?.id || '';
                         const roomId = preferredRoomId;
                         const validation = validateSlotAvailability(
@@ -961,7 +972,7 @@ export default function TimetableGrid({
                           onDrop={(e) => handleDrop(e, day, activeSlotId)}
                           onClick={() => handleCellClick(day, activeSlotId)}
                           className={`border-r border-slate-200/80 transition-all p-1.5 text-center align-middle relative min-h-[64px] ${
-                            isAdmin ? 'cursor-pointer' : ''
+                            effectiveIsAdmin ? 'cursor-pointer' : ''
                           } ${
                             isHovered 
                               ? isCompatible 
@@ -976,7 +987,7 @@ export default function TimetableGrid({
                             <span className="text-[9px] font-mono font-bold text-slate-300 select-none">
                               Slot {activeSlotId}
                             </span>
-                            {isAdmin && (
+                            {effectiveIsAdmin && (
                               <span className="opacity-0 group-hover:opacity-100 text-[9px] bg-white border border-slate-200/80 px-1.5 py-0.2 rounded shadow-2xs text-slate-600 font-bold hover:bg-slate-50 transition-opacity">
                                 + Add
                               </span>
@@ -994,7 +1005,7 @@ export default function TimetableGrid({
       </div>
 
       {/* 2. Admin Collapsible Course List Deck (For Drag & Drop assignment) */}
-      {isAdmin && isSyllabusDrawerOpen && (
+      {effectiveIsAdmin && isSyllabusDrawerOpen && (
         <div id="course-library-sidebar" className="w-full bg-white/95 backdrop-blur-md border border-slate-200/90 p-5 rounded-3xl shadow-sm flex flex-col max-h-[500px] shrink-0 print:hidden animate-in slide-in-from-top-3 duration-200">
           <div className="mb-3 space-y-2.5 shrink-0">
             <div className="flex items-center justify-between">

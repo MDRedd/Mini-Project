@@ -25,7 +25,7 @@ import {
   Filter,
   Warehouse
 } from 'lucide-react';
-import { TimetableEntry, Batch, Course, Faculty, Room, SemesterCourseMap, FacultyCourseMapping } from '../types';
+import { TimetableEntry, Batch, Course, Faculty, Room, SemesterCourseMap, FacultyCourseMapping, AdminPermissions } from '../types';
 import { SEMESTER_SYLLABUS_REGISTRY } from '../data/syllabusData';
 import { calculateClassroomUtilization } from '../utils/classroomUtilization';
 import { 
@@ -37,6 +37,7 @@ import {
   validateAll24Constraints,
   ConstraintAuditItem
 } from '../utils/solver';
+import { Lock } from 'lucide-react';
 
 interface AnalyticsPanelProps {
   entries: TimetableEntry[];
@@ -51,6 +52,8 @@ interface AnalyticsPanelProps {
   mappings?: FacultyCourseMapping[];
   onUpdateEntries?: (newEntries: TimetableEntry[]) => void;
   onShowToast?: (type: 'success' | 'error' | 'warning' | 'info', title: string, message: string) => void;
+  adminPermissions?: AdminPermissions;
+  isSuperAdmin?: boolean;
 }
 
 export default function AnalyticsPanel({
@@ -66,7 +69,23 @@ export default function AnalyticsPanel({
   mappings = [],
   onUpdateEntries,
   onShowToast,
+  adminPermissions,
+  isSuperAdmin = false,
 }: AnalyticsPanelProps) {
+  if (adminPermissions && !adminPermissions.canViewAnalytics && !isSuperAdmin) {
+    return (
+      <div className="bg-white border border-slate-200/90 rounded-3xl p-12 text-center max-w-lg mx-auto shadow-sm space-y-4 my-8">
+        <div className="w-16 h-16 bg-amber-50 text-amber-600 rounded-2xl flex items-center justify-center mx-auto">
+          <Lock className="w-8 h-8" />
+        </div>
+        <h3 className="text-lg font-black text-slate-900">Constraint & Health Analytics Restricted</h3>
+        <p className="text-xs text-slate-500 leading-relaxed">
+          Access to institutional constraint analytics, capacity diagnostics, and solver logs is currently restricted for your administrator role by Super Admin governance policy.
+        </p>
+      </div>
+    );
+  }
+
   const [activeTab, setActiveTab] = useState<'batch' | 'conflicts' | 'workload' | 'diagnostics' | 'logs' | 'constraints' | 'utilization'>('batch');
   const [constraintFilter, setConstraintFilter] = useState<'all' | 'passed' | 'warning' | 'violation'>('all');
   const [roomTypeFilter, setRoomTypeFilter] = useState<'all' | 'Theory' | 'Lab'>('all');
@@ -326,9 +345,18 @@ export default function AnalyticsPanel({
     const requiredHours = rc.periodsPerWeek;
     const deficit = Math.max(0, requiredHours - scheduledHours);
 
-    // Mapped faculty
-    const facultyIdFromEntry = entries.find(e => e.courseId === courseId || (matchedCourse && e.courseId === matchedCourse.id))?.facultyId;
-    const mappedFaculty = faculty.find(f => f.id === facultyIdFromEntry) || faculty[0];
+    // Mapped faculty for active batch or course
+    const activeBatchCourseEntry = activeBatchEntries.find(e => e.courseId === courseId || (matchedCourse && e.courseId === matchedCourse.id));
+    const facultyIdFromEntry = activeBatchCourseEntry?.facultyId || 
+      entries.find(e => e.batchId === activeBatchId && (e.courseId === courseId || (matchedCourse && e.courseId === matchedCourse.id)))?.facultyId ||
+      mappings.find(m => m.courseId === courseId || (matchedCourse && m.courseId === matchedCourse.id))?.facultyId ||
+      entries.find(e => e.courseId === courseId || (matchedCourse && e.courseId === matchedCourse.id))?.facultyId;
+    
+    const mappedFaculty = faculty.find(f => f.id === facultyIdFromEntry) || 
+      faculty.find(f => f.specialization && matchedCourse?.name && (
+        f.specialization.toLowerCase().includes(matchedCourse.name.toLowerCase()) ||
+        matchedCourse.name.toLowerCase().includes(f.specialization.toLowerCase())
+      )) || faculty[0];
     const facultyName = mappedFaculty?.name || 'Unassigned Faculty';
 
     // Calculate total load for this faculty across all entries
@@ -391,32 +419,32 @@ export default function AnalyticsPanel({
   const totalBottlenecks = courseDiagnostics.filter(cd => cd.deficit > 0).length;
 
   return (
-    <div id="analytics-panel" className="bg-white/95 backdrop-blur-md rounded-3xl border border-slate-200/90 shadow-sm overflow-hidden mb-6 print:hidden">
+    <div id="analytics-panel" className="bg-white rounded-3xl border border-slate-200/90 shadow-sm overflow-hidden mb-6 print:hidden text-slate-900">
       {/* Tab Selectors */}
-      <div className="bg-slate-50/70 border-b border-slate-200/80 px-5 py-3.5 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3">
+      <div className="bg-slate-50/80 border-b border-slate-200 px-5 py-3.5 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3">
         <div className="flex items-center gap-2.5">
-          <div className="p-2 rounded-xl bg-indigo-50 text-indigo-600 border border-indigo-100 shadow-xs">
+          <div className="p-2 rounded-xl bg-amber-50 text-amber-600 border border-amber-200/60 shadow-2xs">
             <Activity className="w-4 h-4" />
           </div>
           <div>
-            <span className="font-black text-slate-900 text-sm tracking-tight block">
+            <span className="font-black text-[#0F172A] text-sm tracking-tight block">
               Timetable Health & Analytics Guard
             </span>
-            <span className="text-[10px] text-slate-400 font-semibold">Real-time CSP validation & constraint metrics</span>
+            <span className="text-[10px] text-slate-500 font-semibold">Real-time CSP validation & constraint metrics</span>
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center bg-slate-100/90 p-1 rounded-2xl border border-slate-200/80 gap-0.5">
+        <div className="flex flex-wrap items-center bg-white p-1 rounded-2xl border border-slate-200 gap-0.5 shadow-2xs">
           <button
             onClick={() => setActiveTab('constraints')}
-            className={`relative px-3 py-1.5 rounded-xl text-xs font-extrabold transition-colors flex items-center gap-1.5 cursor-pointer ${
-              activeTab === 'constraints' ? 'text-slate-900' : 'text-slate-500 hover:text-slate-800'
+            className={`relative px-3 py-1.5 rounded-xl text-xs font-black transition-colors flex items-center gap-1.5 cursor-pointer ${
+              activeTab === 'constraints' ? 'text-[#0F172A]' : 'text-slate-500 hover:text-slate-900'
             }`}
           >
             {activeTab === 'constraints' && (
               <motion.div
                 layoutId="analyticsTabActive"
-                className="absolute inset-0 bg-white rounded-xl shadow-xs border border-slate-200/60"
+                className="absolute inset-0 bg-[#F1F5F9] rounded-xl shadow-2xs border border-slate-200"
                 transition={{ type: 'spring', damping: 25, stiffness: 350 }}
               />
             )}
@@ -424,7 +452,7 @@ export default function AnalyticsPanel({
               <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
               24-Rule Audit
               <span className={`text-[10px] h-4.5 min-w-4.5 px-1.5 rounded-full flex items-center justify-center font-black ${
-                passedRulesCount === 24 ? 'bg-emerald-500 text-white shadow-xs shadow-emerald-500/30' : 'bg-amber-500 text-white shadow-xs shadow-amber-500/30'
+                passedRulesCount === 24 ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
               }`}>
                 {passedRulesCount}/24
               </span>
@@ -433,14 +461,14 @@ export default function AnalyticsPanel({
 
           <button
             onClick={() => setActiveTab('utilization')}
-            className={`relative px-3 py-1.5 rounded-xl text-xs font-extrabold transition-colors flex items-center gap-1.5 cursor-pointer ${
-              activeTab === 'utilization' ? 'text-slate-900' : 'text-slate-500 hover:text-slate-800'
+            className={`relative px-3 py-1.5 rounded-xl text-xs font-black transition-colors flex items-center gap-1.5 cursor-pointer ${
+              activeTab === 'utilization' ? 'text-[#0F172A]' : 'text-slate-500 hover:text-slate-900'
             }`}
           >
             {activeTab === 'utilization' && (
               <motion.div
                 layoutId="analyticsTabActive"
-                className="absolute inset-0 bg-white rounded-xl shadow-xs border border-slate-200/60"
+                className="absolute inset-0 bg-[#F1F5F9] rounded-xl shadow-2xs border border-slate-200"
                 transition={{ type: 'spring', damping: 25, stiffness: 350 }}
               />
             )}
@@ -455,14 +483,14 @@ export default function AnalyticsPanel({
 
           <button
             onClick={() => setActiveTab('batch')}
-            className={`relative px-3 py-1.5 rounded-xl text-xs font-extrabold transition-colors flex items-center gap-1.5 cursor-pointer ${
-              activeTab === 'batch' ? 'text-slate-900' : 'text-slate-500 hover:text-slate-800'
+            className={`relative px-3 py-1.5 rounded-xl text-xs font-black transition-colors flex items-center gap-1.5 cursor-pointer ${
+              activeTab === 'batch' ? 'text-[#0F172A]' : 'text-slate-500 hover:text-slate-900'
             }`}
           >
             {activeTab === 'batch' && (
               <motion.div
                 layoutId="analyticsTabActive"
-                className="absolute inset-0 bg-white rounded-xl shadow-xs border border-slate-200/60"
+                className="absolute inset-0 bg-[#F1F5F9] rounded-xl shadow-2xs border border-slate-200"
                 transition={{ type: 'spring', damping: 25, stiffness: 350 }}
               />
             )}
@@ -474,22 +502,22 @@ export default function AnalyticsPanel({
 
           <button
             onClick={() => setActiveTab('conflicts')}
-            className={`relative px-3 py-1.5 rounded-xl text-xs font-extrabold transition-colors flex items-center gap-1.5 cursor-pointer ${
-              activeTab === 'conflicts' ? 'text-slate-900' : 'text-slate-500 hover:text-slate-800'
+            className={`relative px-3 py-1.5 rounded-xl text-xs font-black transition-colors flex items-center gap-1.5 cursor-pointer ${
+              activeTab === 'conflicts' ? 'text-rose-700' : 'text-slate-500 hover:text-slate-900'
             }`}
           >
             {activeTab === 'conflicts' && (
               <motion.div
                 layoutId="analyticsTabActive"
-                className="absolute inset-0 bg-white rounded-xl shadow-xs border border-slate-200/60"
+                className="absolute inset-0 bg-rose-50 rounded-xl shadow-2xs border border-rose-200"
                 transition={{ type: 'spring', damping: 25, stiffness: 350 }}
               />
             )}
             <span className="relative z-10 flex items-center gap-1.5">
-              <ShieldCheck className="w-3.5 h-3.5 text-rose-600" />
+              <ShieldCheck className="w-3.5 h-3.5 text-rose-500" />
               Overlaps
               {uniqueConflicts.length > 0 && (
-                <span className="bg-rose-500 text-white text-[10px] h-4.5 min-w-4.5 px-1.5 rounded-full flex items-center justify-center font-black animate-pulse shadow-xs shadow-rose-500/30">
+                <span className="bg-rose-600 text-white text-[10px] h-4.5 min-w-4.5 px-1.5 rounded-full flex items-center justify-center font-black animate-pulse shadow-xs shadow-rose-500/30">
                   {uniqueConflicts.length}
                 </span>
               )}
@@ -498,14 +526,14 @@ export default function AnalyticsPanel({
 
           <button
             onClick={() => setActiveTab('workload')}
-            className={`relative px-3 py-1.5 rounded-xl text-xs font-extrabold transition-colors flex items-center gap-1.5 cursor-pointer ${
-              activeTab === 'workload' ? 'text-slate-900' : 'text-slate-500 hover:text-slate-800'
+            className={`relative px-3 py-1.5 rounded-xl text-xs font-black transition-colors flex items-center gap-1.5 cursor-pointer ${
+              activeTab === 'workload' ? 'text-[#0F172A]' : 'text-slate-500 hover:text-slate-900'
             }`}
           >
             {activeTab === 'workload' && (
               <motion.div
                 layoutId="analyticsTabActive"
-                className="absolute inset-0 bg-white rounded-xl shadow-xs border border-slate-200/60"
+                className="absolute inset-0 bg-[#F1F5F9] rounded-xl shadow-2xs border border-slate-200"
                 transition={{ type: 'spring', damping: 25, stiffness: 350 }}
               />
             )}
@@ -517,14 +545,14 @@ export default function AnalyticsPanel({
 
           <button
             onClick={() => setActiveTab('diagnostics')}
-            className={`relative px-3 py-1.5 rounded-xl text-xs font-extrabold transition-colors flex items-center gap-1.5 cursor-pointer ${
-              activeTab === 'diagnostics' ? 'text-slate-900' : 'text-slate-500 hover:text-slate-800'
+            className={`relative px-3 py-1.5 rounded-xl text-xs font-black transition-colors flex items-center gap-1.5 cursor-pointer ${
+              activeTab === 'diagnostics' ? 'text-[#0F172A]' : 'text-slate-500 hover:text-slate-900'
             }`}
           >
             {activeTab === 'diagnostics' && (
               <motion.div
                 layoutId="analyticsTabActive"
-                className="absolute inset-0 bg-white rounded-xl shadow-xs border border-slate-200/60"
+                className="absolute inset-0 bg-[#F1F5F9] rounded-xl shadow-2xs border border-slate-200"
                 transition={{ type: 'spring', damping: 25, stiffness: 350 }}
               />
             )}
@@ -532,7 +560,7 @@ export default function AnalyticsPanel({
               <Search className="w-3.5 h-3.5 text-amber-600" />
               Diagnostics
               {totalBottlenecks > 0 && (
-                <span className="bg-amber-500 text-white text-[10px] h-4.5 min-w-4.5 px-1 rounded-full flex items-center justify-center font-black">
+                <span className="bg-amber-100 text-amber-900 text-[10px] h-4.5 min-w-4.5 px-1 rounded-full flex items-center justify-center font-black">
                   {totalBottlenecks}
                 </span>
               )}
@@ -559,14 +587,14 @@ export default function AnalyticsPanel({
                 if (res.logs) setLiveLogs(res.logs);
               }
             }}
-            className={`relative px-3 py-1.5 rounded-xl text-xs font-extrabold transition-colors flex items-center gap-1.5 cursor-pointer ${
-              activeTab === 'logs' ? 'text-slate-900' : 'text-slate-500 hover:text-slate-800'
+            className={`relative px-3 py-1.5 rounded-xl text-xs font-black transition-colors flex items-center gap-1.5 cursor-pointer ${
+              activeTab === 'logs' ? 'text-[#0F172A]' : 'text-slate-500 hover:text-slate-900'
             }`}
           >
             {activeTab === 'logs' && (
               <motion.div
                 layoutId="analyticsTabActive"
-                className="absolute inset-0 bg-white rounded-xl shadow-xs border border-slate-200/60"
+                className="absolute inset-0 bg-[#F1F5F9] rounded-xl shadow-2xs border border-slate-200"
                 transition={{ type: 'spring', damping: 25, stiffness: 350 }}
               />
             )}

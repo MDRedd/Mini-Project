@@ -8,6 +8,7 @@ import {
   User, 
   ShieldCheck, 
   Lock, 
+  Unlock,
   GraduationCap, 
   BookOpen, 
   Database,
@@ -30,10 +31,22 @@ import {
   ArrowRight,
   Play,
   Terminal,
-  CheckCircle2
+  CheckCircle2,
+  Crown,
+  KeyRound,
+  Sliders,
+  LayoutDashboard,
+  Bell,
+  Menu,
+  X,
+  ChevronDown,
+  Building2,
+  Settings as SettingsIcon,
+  LogOut
 } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import jsPDF from 'jspdf';
+import TimeProLogo from './components/TimeProLogo';
 
 import { 
   Day, 
@@ -46,7 +59,12 @@ import {
   FacultyCourseMapping, 
   SemesterCourseMap, 
   TimetableEntry, 
-  ToastMessage 
+  ToastMessage,
+  UserAccount,
+  UserRole,
+  AuditLogEntry,
+  SystemPolicySettings,
+  SolverOptions
 } from './types';
 
 import { 
@@ -61,9 +79,30 @@ import {
   DEFAULT_TIMETABLE 
 } from './data/initialData';
 
-import { generateTimetableForBatch, generateTimetableForSemester, resolveOverlapConflicts, SolverLog } from './utils/solver';
+import { 
+  generateTimetableForBatch, 
+  generateTimetableForBatchAsync,
+  generateTimetableForSemester, 
+  generateTimetableForSemesterAsync,
+  generateTimetableForAllBatches, 
+  generateTimetableForAllBatchesAsync,
+  resolveOverlapConflicts, 
+  SolverLog 
+} from './utils/solver';
+import { GenerationScope } from './components/AutoGenerateModal';
 import { exportTimetableToExcel } from './utils/excelExport';
 import { ensureDailySnapshot, saveSnapshot } from './utils/backup';
+import {
+  getCurrentUser,
+  setCurrentUser,
+  getStoredUserAccounts,
+  saveUserAccounts,
+  getStoredSystemPolicies,
+  saveSystemPolicies,
+  getStoredAuditLogs,
+  recordAuditLog,
+  getEffectiveAdminPermissions
+} from './utils/superAdminData';
 import TimetableGrid from './components/TimetableGrid';
 import BottomFacultyTable from './components/BottomFacultyTable';
 import AdminPanel, { AdminTab } from './components/AdminPanel';
@@ -71,9 +110,28 @@ import AnalyticsPanel from './components/AnalyticsPanel';
 import FacultyTimetableView from './components/FacultyTimetableView';
 import RoomOccupancyView from './components/RoomOccupancyView';
 import ClearGridModal from './components/ClearGridModal';
+import SuperAdminHub from './components/SuperAdminHub';
+import RoleSwitchModal from './components/RoleSwitchModal';
+import RoleLoginGateway from './components/RoleLoginGateway';
+import ClassTimetableHeroView from './components/ClassTimetableHeroView';
 import Toast from './components/Toast';
 
-export type AppViewTab = 'timetable' | 'generator' | 'analytics' | 'faculty' | 'curriculum' | 'rooms' | 'conflicts' | 'batches' | 'regulations';
+export type AppViewTab = 
+  | 'dashboard' 
+  | 'timetable' 
+  | 'generator' 
+  | 'faculty' 
+  | 'sections' 
+  | 'curriculum' 
+  | 'rooms' 
+  | 'constraints' 
+  | 'reports' 
+  | 'settings' 
+  | 'superadmin' 
+  | 'analytics' 
+  | 'conflicts' 
+  | 'batches' 
+  | 'regulations';
 
 export default function App() {
   // --- Persistent Storage State ---
@@ -85,12 +143,35 @@ export default function App() {
   const [semesterCourseMaps, setSemesterCourseMaps] = useState<SemesterCourseMap[]>([]);
   const [timetableEntries, setTimetableEntries] = useState<TimetableEntry[]>([]);
   
+  // --- Super Admin & RBAC Multi-Tier State ---
+  const [currentUser, setCurrentUserAccount] = useState<UserAccount>(() => getCurrentUser());
+  const [userAccounts, setUserAccounts] = useState<UserAccount[]>(() => getStoredUserAccounts());
+  const [systemPolicies, setSystemPolicies] = useState<SystemPolicySettings>(() => getStoredSystemPolicies());
+  const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>(() => getStoredAuditLogs());
+  const [isRoleModalOpen, setIsRoleModalOpen] = useState<boolean>(false);
+  const [showLoginGateway, setShowLoginGateway] = useState<boolean>(() => !localStorage.getItem('apollo_has_logged_in'));
+
+  // Effective granular permissions decided by Super Admin
+  const effectiveAdminPerms = getEffectiveAdminPermissions(currentUser, systemPolicies);
+  const isSuperAdmin = currentUser.role === 'super_admin';
+  const isAdmin = currentUser.role === 'admin' || currentUser.role === 'super_admin';
+  const isFaculty = currentUser.role === 'faculty';
+  const isStudent = currentUser.role === 'student';
+  const isCampusFrozen = systemPolicies.emergencyFreezeTimetables;
+  
+  // Strict permission guards based on Super Admin policy
+  const canRunSolver = isSuperAdmin || (isAdmin && !isCampusFrozen && effectiveAdminPerms.canRunCspSolver);
+  const canEditSlots = isSuperAdmin || (isAdmin && !isCampusFrozen && effectiveAdminPerms.canEditTimetableSlots);
+  const canClearGrid = isSuperAdmin || (isAdmin && !isCampusFrozen && effectiveAdminPerms.canClearGrids);
+  const canExportReports = isSuperAdmin || effectiveAdminPerms.canExportReports;
+  const canViewAnalytics = isSuperAdmin || effectiveAdminPerms.canViewAnalytics;
+  const canModifyTimetable = isSuperAdmin || (isAdmin && !isCampusFrozen && effectiveAdminPerms.canEditTimetableSlots);
+
   // --- UI Control States ---
   const [activeAppTab, setActiveAppTab] = useState<AppViewTab>('timetable');
   const [facultySubTab, setFacultySubTab] = useState<'schedule' | 'directory'>('schedule');
   const [roomsSubTab, setRoomsSubTab] = useState<'occupancy' | 'manager'>('occupancy');
   const [isClearGridModalOpen, setIsClearGridModalOpen] = useState<boolean>(false);
-  const [isAdmin, setIsAdmin] = useState<boolean>(true); // Admin control by default
   const [selectedHeaderSemester, setSelectedHeaderSemester] = useState<string>('all');
   const [activeBatchId, setActiveBatchId] = useState<string>('batch-cse-a');
   const [selectedGenSemester, setSelectedGenSemester] = useState<string>('7');
@@ -158,9 +239,9 @@ export default function App() {
     setBatches(validBatches);
     localStorage.setItem('apollo_batches', JSON.stringify(validBatches));
 
-    // Auto-migrate faculty if stored version has fewer than 35 faculty
+    // Auto-migrate faculty if stored version has fewer than 90 faculty
     const storedFaculty = getStored('apollo_user_faculty', DEFAULT_FACULTY);
-    const validFaculty = (Array.isArray(storedFaculty) && storedFaculty.length >= 35) ? storedFaculty : DEFAULT_FACULTY;
+    const validFaculty = (Array.isArray(storedFaculty) && storedFaculty.length >= DEFAULT_FACULTY.length) ? storedFaculty : DEFAULT_FACULTY;
     setFaculty(validFaculty);
     localStorage.setItem('apollo_user_faculty', JSON.stringify(validFaculty));
 
@@ -277,6 +358,62 @@ export default function App() {
     saveState('apollo_smart_fill', enabled);
   };
 
+  // --- Super Admin & User Profile Handlers ---
+  const handleGatewayLogin = (user: UserAccount) => {
+    setCurrentUserAccount(user);
+    setCurrentUser(user);
+    setShowLoginGateway(false);
+    localStorage.setItem('apollo_has_logged_in', 'true');
+    if (user.role === 'super_admin') {
+      setActiveAppTab('superadmin');
+    } else if (user.role === 'faculty') {
+      setActiveAppTab('faculty');
+    } else {
+      setActiveAppTab('timetable');
+    }
+    const updatedLogs = recordAuditLog(
+      'Role Gateway Authentication',
+      user,
+      `User logged into workspace as ${user.name} (${user.role.replace('_', ' ').toUpperCase()}).`,
+      'security',
+      'info'
+    );
+    setAuditLogs(updatedLogs);
+  };
+
+  const handleSelectUser = (user: UserAccount) => {
+    setCurrentUserAccount(user);
+    setCurrentUser(user);
+    if (user.role === 'student' && activeAppTab === 'superadmin') {
+      setActiveAppTab('timetable');
+    }
+    if (user.role === 'faculty' && activeAppTab === 'superadmin') {
+      setActiveAppTab('faculty');
+    }
+    const updatedLogs = recordAuditLog(
+      'Session Switched',
+      user,
+      `User authenticated as ${user.name} (${user.role.replace('_', ' ').toUpperCase()}).`,
+      'security',
+      'info'
+    );
+    setAuditLogs(updatedLogs);
+  };
+
+  const handleUpdatePolicies = (newPolicies: SystemPolicySettings) => {
+    setSystemPolicies(newPolicies);
+    saveSystemPolicies(newPolicies);
+  };
+
+  const handleUpdateUserAccounts = (newAccounts: UserAccount[]) => {
+    setUserAccounts(newAccounts);
+    saveUserAccounts(newAccounts);
+  };
+
+  const handleUpdateAuditLogs = (newLogs: AuditLogEntry[]) => {
+    setAuditLogs(newLogs);
+  };
+
   // --- Toast Trigger Helper ---
   const handleShowToast = (type: ToastMessage['type'], title: string, message: string) => {
     const id = `toast-${Date.now()}-${Math.random()}`;
@@ -320,6 +457,15 @@ export default function App() {
         setClassTeacherId('');
         setIssueNo(1);
         
+        const updatedLogs = recordAuditLog(
+          'University Database Reset',
+          currentUser,
+          'System restored to default CSE Department baseline data.',
+          'system',
+          'critical'
+        );
+        setAuditLogs(updatedLogs);
+
         handleShowToast('success', 'Database Restored', 'Database has been reset to its pristine original state.');
         setConfirmDialog(prev => ({ ...prev, isOpen: false }));
       }
@@ -328,6 +474,10 @@ export default function App() {
 
   // --- Clear Timetable Handlers ---
   const handleClearSection = (keepLocked: boolean = false) => {
+    if (!canClearGrid) {
+      handleShowToast('error', 'Action Restricted', 'Timetable grid clearing is restricted for Admins by Super Admin policy.');
+      return;
+    }
     const currentBatchId = activeBatchId;
     const activeBatchObj = batches.find(b => b.id === currentBatchId);
     setTimetableEntries((prevEntries) => {
@@ -335,10 +485,24 @@ export default function App() {
       saveState('apollo_user_timetable', remaining);
       return [...remaining];
     });
+
+    const updatedLogs = recordAuditLog(
+      `Cleared Timetable for ${activeBatchObj?.name || 'Section'}`,
+      currentUser,
+      `Unlocked slots were cleared.`,
+      'schedule',
+      'warning'
+    );
+    setAuditLogs(updatedLogs);
+
     handleShowToast('info', 'Section Timetable Cleared', `Removed sessions for ${activeBatchObj?.name || 'current section'}. Ready for fresh assignments!`);
   };
 
   const handleClearAndGenerateNew = async () => {
+    if (!canClearGrid || !canRunSolver) {
+      handleShowToast('error', 'Action Restricted', 'Clear & Generate is restricted for Admins by Super Admin policy.');
+      return;
+    }
     const currentBatchId = activeBatchId;
     const activeBatchObj = batches.find(b => b.id === currentBatchId);
     if (!activeBatchObj) return;
@@ -355,7 +519,7 @@ export default function App() {
 
     await new Promise(r => setTimeout(r, 60));
 
-    const result = generateTimetableForBatch(
+    const result = await generateTimetableForBatchAsync(
       currentBatchId,
       activeBatchObj.semester,
       courses,
@@ -382,6 +546,16 @@ export default function App() {
       const updated = [...remaining, ...result.timetable];
       setTimetableEntries(updated);
       saveState('apollo_user_timetable', updated);
+
+      const updatedLogs = recordAuditLog(
+        `Generated Clean Timetable for ${activeBatchObj.name}`,
+        currentUser,
+        `Placed ${result.timetable.length} periods.`,
+        'schedule',
+        'success'
+      );
+      setAuditLogs(updatedLogs);
+
       handleShowToast('success', 'New Timetable Ready', `Generated brand-new conflict-free schedule for ${activeBatchObj.name}!`);
     } else {
       const updated = [...remaining, ...result.timetable];
@@ -392,17 +566,154 @@ export default function App() {
   };
 
   const handleClearAllUniversity = () => {
+    if (!canClearGrid) {
+      handleShowToast('error', 'Action Restricted', 'Clearing all university timetables is restricted for Admins by Super Admin policy.');
+      return;
+    }
     setTimetableEntries([]);
     saveState('apollo_user_timetable', []);
+
+    const updatedLogs = recordAuditLog(
+      'Cleared All University Timetables',
+      currentUser,
+      'Purged all scheduled periods for all sections.',
+      'schedule',
+      'critical'
+    );
+    setAuditLogs(updatedLogs);
+
     handleShowToast('info', 'All Timetables Cleared', 'All 40 section schedules across 8 semesters have been cleared.');
   };
 
   const handleClearTimetable = () => {
+    if (!canClearGrid) {
+      handleShowToast('error', 'Action Restricted', 'Timetable grid clearing is restricted for Admins by Super Admin policy.');
+      return;
+    }
     setIsClearGridModalOpen(true);
   };
 
-  // --- Automated Timetable Generation Trigger ---
+  // --- Automated Timetable Generation Trigger for All Classes Campus-Wide ---
+  const handleAutoGenerateAllClasses = async (customOptions?: SolverOptions) => {
+    if (!canRunSolver) {
+      handleShowToast('error', 'Solver Restricted', 'CSP Auto-Solver execution is disabled for Admins by Super Admin policy.');
+      return;
+    }
+
+    setIsGenerating(true);
+    saveSnapshot(timetableEntries, `Pre-solver snapshot (Full Campus - ${batches.length} Classes)`, true);
+    handleShowToast('info', 'Invoking Campus-Wide Auto-Solver', `Computing 100% overlap-free schedule for all ${batches.length} classes simultaneously...`);
+
+    await new Promise(r => setTimeout(r, 40));
+
+    const result = await generateTimetableForAllBatchesAsync(
+      courses,
+      faculty,
+      rooms,
+      mappings,
+      semesterCourseMaps,
+      timetableEntries,
+      batches,
+      {
+        enableSmartRelaxation: customOptions?.enableSmartRelaxation ?? true,
+        maxSessionDuration: customOptions?.maxSessionDuration ?? maxSessionDuration,
+        allowThreeHourSessions: (customOptions?.maxSessionDuration ?? maxSessionDuration) >= 3,
+        prioritizeMorningTheory: customOptions?.prioritizeMorningTheory ?? true,
+        enableFacultyResearchDay: customOptions?.enableFacultyResearchDay ?? true,
+        maxDailyHours: customOptions?.maxDailyHours ?? 4,
+        clearPrevious: customOptions?.clearPrevious ?? true,
+      }
+    );
+
+    setIsGenerating(false);
+    if (result.logs) setLastSolverLogs(result.logs);
+    handleUpdateEntries(result.timetable);
+
+    const updatedLogs = recordAuditLog(
+      'Full Campus Timetable Auto-Generation',
+      currentUser,
+      `Generated conflict-free timetables for ${result.batchesSolved} of ${batches.length} classes campus-wide.`,
+      'schedule',
+      result.success ? 'success' : 'warning'
+    );
+    setAuditLogs(updatedLogs);
+
+    if (result.success) {
+      handleShowToast('success', 'Campus Timetable Generated', `Successfully generated 100% conflict-free timetables for all ${result.batchesSolved} classes!`);
+    } else {
+      handleShowToast('warning', 'Partial Generation Completed', result.message);
+    }
+  };
+
+  // --- Unified Automated Timetable Generation with Scope Selector ---
+  const handleAutoGenerateWithScope = async (scope: GenerationScope, targetSemester?: number, targetBatchId?: string, customOptions?: SolverOptions) => {
+    if (scope === 'all') {
+      await handleAutoGenerateAllClasses(customOptions);
+    } else if (scope === 'semester') {
+      const sem = targetSemester || (activeBatch?.semester || 8);
+      await handleAutoGenerateSemester(sem, customOptions);
+    } else {
+      const bId = targetBatchId || activeBatchId;
+      if (bId !== activeBatchId) {
+        setActiveBatchId(bId);
+      }
+      const targetB = batches.find(b => b.id === bId) || activeBatch;
+      if (!targetB) return;
+
+      if (!canRunSolver) {
+        handleShowToast('error', 'Solver Restricted', 'CSP Auto-Solver execution is disabled for Admins by Super Admin policy.');
+        return;
+      }
+
+      setIsGenerating(true);
+      handleShowToast('info', 'Invoking Single Section Solver', `Computing optimal schedule for ${targetB.name}...`);
+      saveSnapshot(timetableEntries, `Pre-solver snapshot (${targetB.name})`, true);
+
+      await new Promise(r => setTimeout(r, 40));
+
+      const result = await generateTimetableForBatchAsync(
+        bId,
+        targetB.semester,
+        courses,
+        faculty,
+        rooms,
+        mappings,
+        semesterCourseMaps,
+        timetableEntries,
+        activeRoomId,
+        batches,
+        {
+          enableSmartRelaxation: customOptions?.enableSmartRelaxation ?? true,
+          maxSessionDuration: customOptions?.maxSessionDuration ?? maxSessionDuration,
+          allowThreeHourSessions: (customOptions?.maxSessionDuration ?? maxSessionDuration) >= 3,
+          prioritizeMorningTheory: customOptions?.prioritizeMorningTheory ?? true,
+          enableFacultyResearchDay: customOptions?.enableFacultyResearchDay ?? true,
+          maxDailyHours: customOptions?.maxDailyHours ?? 4,
+          clearPrevious: customOptions?.clearPrevious ?? true
+        }
+      );
+
+      setIsGenerating(false);
+      if (result.logs) setLastSolverLogs(result.logs);
+
+      const otherBatchesEntries = timetableEntries.filter(e => e.batchId !== bId);
+      const updated = [...otherBatchesEntries, ...result.timetable];
+      handleUpdateEntries(updated);
+
+      if (result.success) {
+        handleShowToast('success', 'Generation Completed', result.message);
+      } else {
+        handleShowToast('warning', 'Partial Generation', result.message);
+      }
+    }
+  };
+
+  // --- Automated Single Batch Timetable Generation Trigger ---
   const handleAutoGenerate = async () => {
+    if (!canRunSolver) {
+      handleShowToast('error', 'Solver Restricted', 'CSP Auto-Solver execution is disabled for Admins by Super Admin policy.');
+      return;
+    }
     const activeBatch = batches.find(b => b.id === activeBatchId);
     if (!activeBatch) return;
 
@@ -456,14 +767,18 @@ export default function App() {
   };
 
   // --- Automated Simultaneous Semester / Year Generation Trigger ---
-  const handleAutoGenerateSemester = async (targetSemInput?: number | 'all') => {
+  const handleAutoGenerateSemester = async (targetSemInput?: number | 'all', customOptions?: SolverOptions) => {
+    if (!canRunSolver) {
+      handleShowToast('error', 'Solver Restricted', 'CSP Auto-Solver execution is disabled for Admins by Super Admin policy.');
+      return;
+    }
     const rawTarget = targetSemInput !== undefined ? targetSemInput : (selectedGenSemester === 'all' ? 'all' : Number(selectedGenSemester));
 
     setIsGenerating(true);
 
     if (rawTarget === 'all') {
       // Generate all semesters (Full Campus)
-      const allSemesters = Array.from(new Set(batches.map(b => b.semester))).sort((a, b) => b - a);
+      const allSemesters = Array.from(new Set<number>(batches.map(b => b.semester))).sort((a, b) => b - a);
       saveSnapshot(timetableEntries, `Pre-solver snapshot (Full Campus - ${batches.length} Batches)`, true);
       handleShowToast('info', 'Invoking Full Campus Multi-Year Solver', `Simultaneously solving all ${batches.length} sections across all ${allSemesters.length} academic semesters...`);
 
@@ -485,9 +800,13 @@ export default function App() {
           currentTimetable,
           batches,
           {
-            enableSmartRelaxation: true,
-            maxSessionDuration,
-            allowThreeHourSessions: maxSessionDuration >= 3
+            enableSmartRelaxation: customOptions?.enableSmartRelaxation ?? true,
+            maxSessionDuration: customOptions?.maxSessionDuration ?? maxSessionDuration,
+            allowThreeHourSessions: (customOptions?.maxSessionDuration ?? maxSessionDuration) >= 3,
+            prioritizeMorningTheory: customOptions?.prioritizeMorningTheory ?? true,
+            enableFacultyResearchDay: customOptions?.enableFacultyResearchDay ?? true,
+            maxDailyHours: customOptions?.maxDailyHours ?? 4,
+            clearPrevious: customOptions?.clearPrevious ?? true
           }
         );
         currentTimetable = semResult.timetable;
@@ -498,6 +817,16 @@ export default function App() {
       setIsGenerating(false);
       setLastSolverLogs(allLogs);
       handleUpdateEntries(currentTimetable);
+
+      const updatedLogs = recordAuditLog(
+        'Full Campus Multi-Year Solver Run',
+        currentUser,
+        `Solved timetables for ${totalSolved} of ${batches.length} sections across all 8 semesters.`,
+        'schedule',
+        'success'
+      );
+      setAuditLogs(updatedLogs);
+
       handleShowToast('success', 'Full Campus Generated', `Successfully generated conflict-free timetables for ${totalSolved} of ${batches.length} batches across all years!`);
       return;
     }
@@ -522,7 +851,7 @@ export default function App() {
 
     await new Promise(r => setTimeout(r, 40));
 
-    const result = generateTimetableForSemester(
+    const result = await generateTimetableForSemesterAsync(
       targetSemester,
       courses,
       faculty,
@@ -532,9 +861,13 @@ export default function App() {
       timetableEntries,
       batches,
       {
-        enableSmartRelaxation: true,
-        maxSessionDuration,
-        allowThreeHourSessions: maxSessionDuration >= 3
+        enableSmartRelaxation: customOptions?.enableSmartRelaxation ?? true,
+        maxSessionDuration: customOptions?.maxSessionDuration ?? maxSessionDuration,
+        allowThreeHourSessions: (customOptions?.maxSessionDuration ?? maxSessionDuration) >= 3,
+        prioritizeMorningTheory: customOptions?.prioritizeMorningTheory ?? true,
+        enableFacultyResearchDay: customOptions?.enableFacultyResearchDay ?? true,
+        maxDailyHours: customOptions?.maxDailyHours ?? 4,
+        clearPrevious: customOptions?.clearPrevious ?? true
       }
     );
 
@@ -546,6 +879,16 @@ export default function App() {
 
     if (result.success) {
       handleUpdateEntries(result.timetable);
+
+      const updatedLogs = recordAuditLog(
+        `Semester ${targetSemester} Multi-Section Solver Run`,
+        currentUser,
+        `Solved all ${targetBatches.length} parallel sections for Semester ${targetSemester}.`,
+        'schedule',
+        'success'
+      );
+      setAuditLogs(updatedLogs);
+
       handleShowToast('success', 'Semester Generation Completed', result.message);
     } else {
       handleUpdateEntries(result.timetable);
@@ -589,6 +932,10 @@ export default function App() {
 
   // --- Download PDF Document via jsPDF ---
   const handleDownloadPDF = async () => {
+    if (!canExportReports) {
+      handleShowToast('error', 'Export Restricted', 'PDF export is restricted for Admins by Super Admin policy.');
+      return;
+    }
     const element = document.getElementById('timetable-capture-area');
     if (!element) {
       handleShowToast('error', 'Export Failed', 'Timetable capture area not found in DOM.');
@@ -657,6 +1004,10 @@ export default function App() {
 
   // --- Download PNG Image ---
   const handleDownloadPNG = async () => {
+    if (!canExportReports) {
+      handleShowToast('error', 'Export Restricted', 'PNG export is restricted for Admins by Super Admin policy.');
+      return;
+    }
     const element = document.getElementById('timetable-capture-area');
     if (!element) {
       handleShowToast('error', 'Export Failed', 'Timetable capture area not found in DOM.');
@@ -721,6 +1072,10 @@ export default function App() {
 
   // --- Export to Excel ---
   const handleExportExcel = () => {
+    if (!canExportReports) {
+      handleShowToast('error', 'Export Restricted', 'Excel export is restricted for Admins by Super Admin policy.');
+      return;
+    }
     try {
       exportTimetableToExcel({
         entries: timetableEntries,
@@ -761,403 +1116,386 @@ export default function App() {
   // We filter by Batch ID
   const activeBatchEntries = timetableEntries.filter(e => e.batchId === activeBatchId);
 
+  const sidebarNavItems = [
+    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { id: 'timetable', label: 'Class Timetable', icon: Calendar },
+    { id: 'generator', label: 'Auto Generator', icon: Sparkles },
+    { id: 'faculty', label: 'Faculty & Workload', icon: Users },
+    { id: 'sections', label: 'Student Sections', icon: GraduationCap },
+    { id: 'curriculum', label: 'Subjects & Curriculum', icon: BookOpen },
+    { id: 'rooms', label: 'Rooms & Labs', icon: Warehouse },
+    { id: 'constraints', label: 'Constraints', icon: ShieldCheck },
+    { id: 'reports', label: 'Reports', icon: FileSpreadsheet },
+    { id: 'settings', label: 'Settings', icon: SettingsIcon },
+  ];
+
+  const [sidebarMobileOpen, setSidebarMobileOpen] = useState<boolean>(false);
+  const [headerSearchQuery, setHeaderSearchQuery] = useState<string>('');
+  const [profileDropdownOpen, setProfileDropdownOpen] = useState<boolean>(false);
+
+  // Logout handler returning to initial role login gateway
+  const handleLogout = () => {
+    localStorage.removeItem('apollo_has_logged_in');
+    setShowLoginGateway(true);
+    setProfileDropdownOpen(false);
+    const updatedLogs = recordAuditLog(
+      'User Logged Out',
+      currentUser,
+      `User ${currentUser.name} (${currentUser.role.toUpperCase()}) logged out.`,
+      'security',
+      'info'
+    );
+    setAuditLogs(updatedLogs);
+    handleShowToast('info', 'Logged Out', 'You have been safely signed out. Select a role to sign in.');
+  };
+
+  // FIRST DASHBOARD: Role Login Gateway Portal
+  if (showLoginGateway) {
+    return (
+      <div className="min-h-screen bg-[#F8FAFC] font-sans selection:bg-[#4F46E5] selection:text-white">
+        <RoleLoginGateway
+          userAccounts={userAccounts}
+          policies={systemPolicies}
+          onLogin={handleGatewayLogin}
+          onShowToast={handleShowToast}
+        />
+        <Toast toasts={toasts} onRemove={handleRemoveToast} />
+      </div>
+    );
+  }
+
+  // Initials helper
+  const getUserInitials = (name: string) => {
+    return name
+      .split(' ')
+      .filter(Boolean)
+      .map(part => part[0])
+      .slice(0, 2)
+      .join('')
+      .toUpperCase() || 'TP';
+  };
+
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col font-sans selection:bg-indigo-100 print:bg-white print:text-black">
-      {/* 1. Header Navigation Bar */}
-      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200/80 shadow-xs print:hidden">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex flex-col md:flex-row md:items-center justify-between gap-3">
-          {/* Logo & System Brand */}
+    <div className="min-h-screen bg-[#F8FAFC] text-[#0F172A] flex flex-col font-sans selection:bg-[#4F46E5] selection:text-white print:bg-white print:text-black">
+      {/* 1. Header (Height: 64–72px, White Background, Subtle Bottom Border) */}
+      <header className="sticky top-0 z-40 bg-white border-b border-[#E2E8F0] shadow-xs print:hidden h-16 sm:h-[70px] flex items-center px-4 sm:px-6">
+        <div className="w-full flex items-center justify-between gap-4">
+          {/* Left: Mobile Menu Toggle + TimePro Logo */}
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-2xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-purple-600 flex items-center justify-center text-white shadow-md shadow-indigo-600/25 shrink-0">
-              <Calendar className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-base font-black tracking-tight text-slate-900 leading-none">
-                  Auto Timetable Generator
-                </h1>
-                <span className="text-[10px] bg-indigo-50 border border-indigo-200/60 text-indigo-700 font-extrabold px-2 py-0.5 rounded-full font-mono">
-                  v2.5 Professional
-                </span>
-              </div>
-              <p className="text-xs text-slate-500 font-medium mt-0.5 flex items-center gap-1.5">
-                <span>B.Tech Computer Science & Engineering</span>
-                <span>•</span>
-                <span className="text-slate-400">School of Technology</span>
-              </p>
-            </div>
+            <button
+              onClick={() => setSidebarMobileOpen(!sidebarMobileOpen)}
+              className="lg:hidden p-2 rounded-xl text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+              title="Toggle Navigation Menu"
+            >
+              {sidebarMobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
+            <TimeProLogo size="md" showSubtitle={false} />
           </div>
 
-          {/* Quick Info & Role Switcher */}
-          <div className="flex items-center gap-3">
-            <div className="hidden sm:flex items-center gap-2 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-2xl text-xs">
-              <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span className="font-bold text-slate-700">Active Section:</span>
-              <span className="font-extrabold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-md font-mono text-[11px]">
-                {activeBatch?.name || 'CSE-A'}
+          {/* Center: Search Bar (Search sections, subjects, faculty, rooms... Ctrl K) */}
+          <div className="hidden md:flex items-center flex-1 max-w-md mx-4">
+            <div className="relative w-full">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <input
+                type="text"
+                placeholder="Search sections, subjects, faculty, rooms..."
+                value={headerSearchQuery}
+                onChange={(e) => setHeaderSearchQuery(e.target.value)}
+                className="w-full bg-[#F8FAFC] hover:bg-slate-100/80 focus:bg-white border border-[#E2E8F0] focus:border-[#4F46E5] rounded-2xl pl-10 pr-16 py-2 text-xs font-semibold text-[#0F172A] placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#4F46E5]/20 transition-all"
+              />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-mono font-bold bg-white text-slate-500 border border-[#E2E8F0] px-1.5 py-0.5 rounded shadow-2xs pointer-events-none">
+                Ctrl K
               </span>
             </div>
-
-            {/* Role Switcher */}
-            <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200/80">
-              <button
-                onClick={() => setIsAdmin(false)}
-                className={`relative z-10 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
-                  !isAdmin ? 'text-white' : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                {!isAdmin && (
-                  <motion.div
-                    layoutId="roleTabIndicator"
-                    className="absolute inset-0 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg shadow-md -z-10"
-                    transition={{ type: 'spring', damping: 25, stiffness: 350 }}
-                  />
-                )}
-                <User className="w-3.5 h-3.5" />
-                Student View
-              </button>
-              <button
-                onClick={() => setIsAdmin(true)}
-                className={`relative z-10 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
-                  isAdmin ? 'text-white' : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                {isAdmin && (
-                  <motion.div
-                    layoutId="roleTabIndicator"
-                    className="absolute inset-0 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg shadow-md -z-10"
-                    transition={{ type: 'spring', damping: 25, stiffness: 350 }}
-                  />
-                )}
-                <ShieldCheck className="w-3.5 h-3.5" />
-                Admin Console
-              </button>
-            </div>
           </div>
-        </div>
 
-        {/* Master Navigation Tabs Strip */}
-        <div className="border-t border-slate-200/70 bg-slate-50/70">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6">
-            <nav className="flex items-center gap-1 overflow-x-auto py-2 custom-scrollbar">
-              {[
-                { id: 'timetable', label: 'Class Timetable', icon: Calendar, badge: `${activeBatchEntries.length} Slots` },
-                { id: 'generator', label: 'Auto Generator Studio', icon: Sparkles, badge: 'CSP v2.5' },
-                { id: 'analytics', label: 'Health & 24 Constraints', icon: ShieldCheck, badge: '100% Passed' },
-                { id: 'faculty', label: 'Faculty Directory & Workload', icon: Users, badge: `${faculty.length}` },
-                { id: 'curriculum', label: 'Curriculum & Syllabus', icon: BookOpen, badge: 'Sem 1-8' },
-                { id: 'rooms', label: 'Classrooms & Labs', icon: Warehouse, badge: `${rooms.length}` },
-                { id: 'conflicts', label: 'Section Overlaps', icon: AlertTriangle, badge: '0 Clashes' },
-                { id: 'batches', label: 'Batches & Sections', icon: GraduationCap, badge: `${batches.length}` },
-                { id: 'regulations', label: 'Academic Regulations', icon: FileText, badge: 'AICTE' },
-              ].map(tab => {
-                const Icon = tab.icon;
-                const isActive = activeAppTab === tab.id;
-                return (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveAppTab(tab.id as AppViewTab)}
-                    className={`relative flex items-center gap-2 px-3.5 py-2 rounded-xl font-extrabold text-xs transition-all whitespace-nowrap cursor-pointer ${
-                      isActive
-                        ? 'text-indigo-700 bg-white border border-slate-200/90 shadow-2xs'
-                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80 border border-transparent'
-                    }`}
-                  >
-                    <Icon className={`w-4 h-4 ${isActive ? 'text-indigo-600' : 'text-slate-400'}`} />
-                    <span>{tab.label}</span>
-                    {tab.badge && (
-                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-mono font-bold ${
-                        isActive ? 'bg-indigo-50 text-indigo-700 border border-indigo-100' : 'bg-slate-200/60 text-slate-500'
-                      }`}>
-                        {tab.badge}
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
-            </nav>
+          {/* Right: Notifications & Admin Profile */}
+          <div className="flex items-center gap-2 sm:gap-3">
+            {/* Notifications Bell */}
+            <button
+              onClick={() => handleShowToast('info', 'Notifications', 'System operational. All 24 AICTE constraints verified conflict-free.')}
+              className="relative p-2.5 rounded-2xl text-slate-600 hover:text-[#0F172A] hover:bg-slate-100 border border-transparent hover:border-[#E2E8F0] transition-all cursor-pointer"
+              title="Notifications"
+            >
+              <Bell className="w-4 h-4" />
+              <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[#DC2626] ring-2 ring-white" />
+            </button>
+
+            {/* Profile Dropdown Container */}
+            <div className="relative">
+              {/* Admin Profile Button */}
+              <button
+                onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
+                className="flex items-center gap-2.5 p-1 sm:px-3 sm:py-1.5 rounded-2xl bg-slate-50 hover:bg-slate-100/90 border border-[#E2E8F0] transition-all cursor-pointer shadow-2xs group"
+                title="Account options & Role profile"
+              >
+                {/* Profile Avatar Pill */}
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-black text-white shrink-0 shadow-2xs ${
+                  currentUser.role === 'super_admin' ? 'bg-[#D4A72C]' :
+                  currentUser.role === 'admin' ? 'bg-[#3B82F6]' :
+                  currentUser.role === 'faculty' ? 'bg-[#10B981]' : 'bg-[#8B5CF6]'
+                }`}>
+                  {getUserInitials(currentUser.name)}
+                </div>
+
+                <div className="text-left hidden sm:block">
+                  <p className="text-xs font-black text-[#0F172A] leading-tight group-hover:text-[#4F46E5] transition-colors">
+                    {currentUser.name}
+                  </p>
+                  <div className="flex items-center gap-1">
+                    <span className={`text-[9px] font-mono font-black uppercase px-1.5 py-0.2 rounded ${
+                      currentUser.role === 'super_admin' ? 'bg-amber-100 text-amber-900' :
+                      currentUser.role === 'admin' ? 'bg-blue-100 text-blue-900' :
+                      currentUser.role === 'faculty' ? 'bg-emerald-100 text-emerald-900' :
+                      'bg-purple-100 text-purple-900'
+                    }`}>
+                      {currentUser.role === 'super_admin' ? 'SUPER ADMIN' : currentUser.role.toUpperCase()}
+                    </span>
+                  </div>
+                </div>
+
+                <ChevronDown className={`w-3.5 h-3.5 text-slate-400 group-hover:text-[#0F172A] transition-transform duration-150 ml-0.5 ${profileDropdownOpen ? 'rotate-180' : ''}`} />
+              </button>
+
+              {/* Profile Menu Dropdown */}
+              <AnimatePresence>
+                {profileDropdownOpen && (
+                  <>
+                    <div 
+                      onClick={() => setProfileDropdownOpen(false)} 
+                      className="fixed inset-0 z-40" 
+                    />
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.95, y: 6 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.95, y: 6 }}
+                      transition={{ duration: 0.15 }}
+                      className="absolute right-0 top-full mt-2 w-72 bg-white rounded-2xl border border-[#E2E8F0] shadow-xl z-50 p-2 space-y-1 text-left"
+                    >
+                      {/* User Header Details */}
+                      <div className="p-3 bg-[#F8FAFC] rounded-xl border border-[#E2E8F0] space-y-2">
+                        <div className="flex items-center gap-2.5">
+                          <div className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-black text-white shrink-0 shadow-xs ${
+                            currentUser.role === 'super_admin' ? 'bg-[#D4A72C]' :
+                            currentUser.role === 'admin' ? 'bg-[#3B82F6]' :
+                            currentUser.role === 'faculty' ? 'bg-[#10B981]' : 'bg-[#8B5CF6]'
+                          }`}>
+                            {getUserInitials(currentUser.name)}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <h4 className="text-xs font-black text-[#0F172A] truncate leading-tight">
+                              {currentUser.name}
+                            </h4>
+                            <p className="text-[11px] text-[#64748B] truncate">
+                              {currentUser.email}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-between text-[10px] pt-1 border-t border-slate-200">
+                          <span className="text-[#64748B] font-medium">{currentUser.department || 'Academic Operations'}</span>
+                          <span className={`font-mono font-black uppercase px-2 py-0.5 rounded ${
+                            currentUser.role === 'super_admin' ? 'bg-amber-100 text-amber-900' :
+                            currentUser.role === 'admin' ? 'bg-blue-100 text-blue-900' :
+                            currentUser.role === 'faculty' ? 'bg-emerald-100 text-emerald-900' :
+                            'bg-purple-100 text-purple-900'
+                          }`}>
+                            {currentUser.role === 'super_admin' ? 'Super Admin' : currentUser.role}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Dropdown Actions */}
+                      <div className="pt-1 space-y-0.5">
+                        <button
+                          onClick={() => {
+                            setProfileDropdownOpen(false);
+                            setIsRoleModalOpen(true);
+                          }}
+                          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-[#0F172A] hover:bg-[#EEF2FF] hover:text-[#4F46E5] transition-colors cursor-pointer text-left"
+                        >
+                          <Users className="w-4 h-4 text-[#4F46E5]" />
+                          <span>Switch Role / Account</span>
+                        </button>
+
+                        <button
+                          onClick={handleLogout}
+                          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-[#DC2626] hover:bg-[#FEF2F2] transition-colors cursor-pointer text-left"
+                        >
+                          <LogOut className="w-4 h-4 text-[#DC2626]" />
+                          <span>Log Out</span>
+                        </button>
+                      </div>
+                    </motion.div>
+                  </>
+                )}
+              </AnimatePresence>
+            </div>
           </div>
         </div>
       </header>
 
-      {/* 2. Main View Container */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-6">
-        
-        {/* VIEW 1: CLASS TIMETABLES */}
-        {activeAppTab === 'timetable' && (
-          <div className="space-y-6">
-            {/* Top Toolbar: Batch Selectors & Quick Actions */}
-            <section className="bg-white/90 backdrop-blur-md border border-slate-200/90 p-5 sm:p-6 rounded-3xl shadow-sm space-y-5 print:hidden">
-              {/* Batch Selection & Semester Tabs */}
-              <div>
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 mb-3">
-                  <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider flex items-center gap-2">
-                    <GraduationCap className="w-4 h-4 text-indigo-600" />
-                    Select Student Section <span className="text-slate-400 font-medium">({batches.length} Sections Available)</span>
-                  </label>
-                  
-                  {/* Semester Quick Filter Tabs */}
-                  <div className="flex flex-wrap items-center gap-1 bg-slate-100/90 p-1 rounded-2xl border border-slate-200/70">
-                    <button
-                      onClick={() => setSelectedHeaderSemester('all')}
-                      className={`text-[11px] font-bold px-3 py-1 rounded-xl transition-all cursor-pointer ${
-                        selectedHeaderSemester === 'all'
-                          ? 'bg-indigo-600 text-white shadow-sm'
-                          : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/70'
-                      }`}
-                    >
-                      All ({batches.length})
-                    </button>
-                    {[8, 7, 6, 5, 4, 3, 2, 1].map((sem) => {
-                      const count = batches.filter(b => b.semester === sem).length;
-                      if (count === 0) return null;
-                      const isSelected = selectedHeaderSemester === sem.toString();
-                      return (
-                        <button
-                          key={sem}
-                          onClick={() => {
-                            setSelectedHeaderSemester(sem.toString());
-                            const firstBatchInSem = batches.find(b => b.semester === sem);
-                            if (firstBatchInSem) setActiveBatchId(firstBatchInSem.id);
-                          }}
-                          className={`text-[11px] font-bold px-2.5 py-1 rounded-xl transition-all cursor-pointer ${
-                            isSelected
-                              ? 'bg-indigo-600 text-white shadow-sm'
-                              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/70'
-                          }`}
-                        >
-                          Sem {sem} <span className="opacity-75">({count})</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
+      {/* Campus Freeze Emergency Banner */}
+      {isCampusFrozen && (
+        <div className="bg-amber-100 text-amber-950 px-4 py-2 text-xs font-black border-b border-amber-300 shadow-inner print:hidden">
+          <div className="max-w-7xl mx-auto flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+              <span>
+                CAMPUS TIMETABLE FREEZE ACTIVE: Edits and CSP solver runs are locked university-wide by Super Admin ({currentUser.name}).
+              </span>
+            </div>
+            {isSuperAdmin && (
+              <button
+                onClick={() => {
+                  const updated = { ...systemPolicies, emergencyFreezeTimetables: false };
+                  setSystemPolicies(updated);
+                  saveSystemPolicies(updated);
+                  handleShowToast('info', 'Freeze Lifted', 'Campus timetable edits unlocked.');
+                }}
+                className="bg-amber-900 hover:bg-amber-800 text-white font-extrabold text-[11px] px-3 py-1 rounded-lg transition-colors cursor-pointer shrink-0"
+              >
+                Lift Freeze
+              </button>
+            )}
+          </div>
+        </div>
+      )}
 
-                {/* Batch Chips */}
-                <div className="flex flex-wrap gap-2 max-h-[140px] overflow-y-auto pr-1 custom-scrollbar py-1">
-                  {(selectedHeaderSemester === 'all'
-                    ? batches
-                    : batches.filter(b => b.semester === Number(selectedHeaderSemester))
-                  ).map((batch) => {
-                    const isActive = batch.id === activeBatchId;
-                    return (
-                      <button
-                        key={batch.id}
-                        onClick={() => setActiveBatchId(batch.id)}
-                        className={`text-left px-3.5 py-2 rounded-2xl border transition-all duration-150 cursor-pointer ${
-                          isActive
-                            ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white border-transparent shadow-md shadow-indigo-600/20 scale-[1.02] font-semibold ring-2 ring-indigo-400/40'
-                            : 'bg-slate-50 hover:bg-slate-100/90 text-slate-700 border-slate-200/80 font-medium hover:border-slate-300'
-                        }`}
-                      >
-                        <div className="flex items-center gap-2">
-                          <span className={`h-2 w-2 rounded-full ${isActive ? 'bg-emerald-300 animate-pulse' : 'bg-slate-300'}`}></span>
-                          <span className="text-xs font-bold leading-none">{batch.name}</span>
-                        </div>
-                        <div className={`text-[10px] mt-1 font-mono leading-none ${isActive ? 'text-indigo-100' : 'text-slate-400'}`}>
-                          Sem {batch.semester} {batch.studentCount ? `• ${batch.studentCount} studs` : ''}
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
+      {/* Main Layout: Left Sidebar + Content Area */}
+      <div className="flex-1 flex w-full">
+        {/* 2. Left Sidebar (Width: 220–240px, White Background, Dark Navy Text, Active: Very Light Indigo) */}
+        <aside
+          className={`fixed lg:sticky top-16 sm:top-[70px] z-30 h-[calc(100vh-64px)] sm:h-[calc(100vh-70px)] w-60 shrink-0 bg-white border-r border-[#E2E8F0] flex flex-col justify-between p-3.5 transition-transform duration-200 print:hidden ${
+            sidebarMobileOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full lg:translate-x-0'
+          }`}
+        >
+          {/* Navigation Links */}
+          <nav className="space-y-1 overflow-y-auto custom-scrollbar pr-1">
+            {sidebarNavItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = 
+                activeAppTab === item.id ||
+                (item.id === 'sections' && activeAppTab === 'batches') ||
+                (item.id === 'constraints' && (activeAppTab === 'analytics' || activeAppTab === 'conflicts')) ||
+                (item.id === 'reports' && activeAppTab === 'regulations') ||
+                (item.id === 'settings' && activeAppTab === 'superadmin');
 
-              {/* Quick Actions & Export Hub */}
-              <div className="pt-4 border-t border-slate-100 flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
-                {/* Fast Solver Shortcut Button */}
-                <div className="flex items-center gap-2">
-                  {isAdmin && (
-                    <>
-                      <button
-                        onClick={handleAutoGenerate}
-                        disabled={isGenerating}
-                        className={`bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-extrabold text-xs px-4 py-2 rounded-xl transition-all shadow-sm flex items-center gap-1.5 cursor-pointer active:scale-95 ${
-                          isGenerating ? 'opacity-70 cursor-not-allowed' : ''
-                        }`}
-                      >
-                        <Sparkles className={`w-3.5 h-3.5 ${isGenerating ? 'animate-spin' : ''}`} />
-                        {isGenerating ? 'Solving...' : 'Auto-Generate This Section'}
-                      </button>
-
-                      <button
-                        onClick={() => setIsClearGridModalOpen(true)}
-                        className="text-xs font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200/80 px-3 py-2 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs"
-                        title="Clear grid and generate a new one"
-                      >
-                        <Trash2 className="w-3.5 h-3.5 text-rose-600" />
-                        <span>Clear Grid</span>
-                      </button>
-                    </>
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => {
+                    setActiveAppTab(item.id as AppViewTab);
+                    setSidebarMobileOpen(false);
+                  }}
+                  className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-xs font-extrabold transition-all cursor-pointer text-left ${
+                    isActive
+                      ? 'bg-[#EEF2FF] text-[#4F46E5] font-black'
+                      : 'text-[#0F172A] hover:bg-slate-50 hover:text-[#4F46E5]'
+                  }`}
+                >
+                  <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-[#4F46E5]' : 'text-slate-500'}`} />
+                  <span className="flex-1 truncate">{item.label}</span>
+                  {item.id === 'timetable' && (
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#4F46E5]" />
                   )}
-                  <button
-                    onClick={() => setActiveAppTab('generator')}
-                    className="text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200/70 px-3 py-2 rounded-xl transition-all flex items-center gap-1 cursor-pointer"
-                  >
-                    <span>Open Generator Studio</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </button>
-                </div>
+                </button>
+              );
+            })}
+          </nav>
 
-                {/* Export Tools Hub */}
-                <div className="flex items-center gap-1.5 bg-slate-100/80 p-1 rounded-2xl border border-slate-200/80">
-                  <button
-                    onClick={handlePrint}
-                    className="hover:bg-white text-slate-700 font-bold text-xs px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer"
-                    title="Open browser print dialog"
-                  >
-                    <Printer className="w-3.5 h-3.5 text-slate-600" />
-                    Print
-                  </button>
-
-                  <button
-                    onClick={handleDownloadPDF}
-                    className="hover:bg-white text-slate-700 hover:text-rose-700 font-bold text-xs px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer"
-                    title="Download PDF document"
-                  >
-                    <Download className="w-3.5 h-3.5 text-rose-600" />
-                    PDF
-                  </button>
-
-                  <button
-                    onClick={handleDownloadPNG}
-                    className="hover:bg-white text-slate-700 hover:text-blue-700 font-bold text-xs px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer"
-                    title="Download PNG image"
-                  >
-                    <Download className="w-3.5 h-3.5 text-blue-600" />
-                    PNG
-                  </button>
-
-                  <button
-                    onClick={handleExportExcel}
-                    className="hover:bg-white text-slate-700 hover:text-emerald-700 font-bold text-xs px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer"
-                    title="Export to Excel Spreadsheet"
-                  >
-                    <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
-                    Excel
-                  </button>
-                </div>
+          {/* Bottom Card: Academic Session Badge */}
+          <div className="pt-3 border-t border-[#E2E8F0]">
+            <div className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-2xl p-3 flex items-center gap-3">
+              <div className="w-8 h-8 rounded-xl bg-white border border-[#E2E8F0] text-[#4F46E5] flex items-center justify-center shrink-0 shadow-2xs">
+                <Building className="w-4 h-4" />
               </div>
-            </section>
-
-            {/* Printable Timetable Capture Area */}
-            <div id="timetable-capture-area" className="flex flex-col gap-6 bg-slate-100/50 p-4 sm:p-6 rounded-3xl border border-slate-200/70 shadow-xs print:p-0 print:border-none print:shadow-none print:bg-transparent">
-              {/* Header Card */}
-              <section className="bg-white/95 backdrop-blur-md border border-slate-200/90 p-6 rounded-3xl shadow-sm text-center relative overflow-hidden" id="print-timetable-card">
-                <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600" />
-                
-                <div className="border-b border-dashed border-slate-200/80 pb-3.5 mb-4 flex flex-col sm:flex-row justify-between items-center gap-2">
-                  <div className="flex items-center gap-2">
-                    <span className="h-2 w-2 rounded-full bg-indigo-600 animate-pulse"></span>
-                    <span className="text-[11px] font-mono font-black tracking-widest text-slate-500 uppercase">
-                      TIME TABLE MANAGEMENT • SCHOOL OF TECHNOLOGY
-                    </span>
-                  </div>
-                  <span className="text-xs bg-slate-100/90 font-black px-3.5 py-1 rounded-full text-slate-800 border border-slate-200 font-mono">
-                    Issue No.: {issueNo}
-                  </span>
-                </div>
-
-                <h2 className="text-xl sm:text-2xl font-black text-slate-950 tracking-tight leading-none">
-                  CLASS TIMETABLE — B.TECH CSE
-                </h2>
-                
-                <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-3.5 pt-4 text-xs font-semibold text-slate-700 border-t border-slate-100">
-                  <div className="bg-slate-50/80 hover:bg-slate-50 px-3.5 py-2.5 rounded-2xl border border-slate-100 transition-colors">
-                    <p className="text-[10px] text-slate-400 font-mono font-bold uppercase mb-0.5">Year of Study</p>
-                    <p className="text-slate-950 font-black">{getYearName(activeBatch?.semester || 1)}</p>
-                  </div>
-                  <div className="bg-indigo-50/50 hover:bg-indigo-50 px-3.5 py-2.5 rounded-2xl border border-indigo-100 transition-colors">
-                    <p className="text-[10px] text-indigo-400 font-mono font-bold uppercase mb-0.5">Academic Semester</p>
-                    <p className="text-indigo-700 font-black">Sem - {getRomanSemester(activeBatch?.semester || 1)} ({activeBatch?.name})</p>
-                  </div>
-                  <div className="bg-slate-50/80 hover:bg-slate-50 px-3.5 py-2.5 rounded-2xl border border-slate-100 flex flex-col justify-center items-center relative group transition-colors">
-                    <p className="text-[10px] text-slate-400 font-mono font-bold uppercase mb-0.5">Physical Classroom</p>
-                    <p className="text-slate-950 font-black text-xs">Room No. {activeRoom ? activeRoom.roomNumber : '027'}</p>
-                    {isAdmin && (
-                      <select
-                        value={activeRoomId}
-                        onChange={(e) => setActiveRoomId(e.target.value)}
-                        className="absolute inset-0 opacity-0 cursor-pointer print:hidden w-full h-full"
-                        title="Click to select physical classroom"
-                      >
-                        {rooms.map(r => (
-                          <option key={r.id} value={r.id}>Room {r.roomNumber}</option>
-                        ))}
-                      </select>
-                    )}
-                  </div>
-                  <div className="bg-slate-50/80 hover:bg-slate-50 px-3.5 py-2.5 rounded-2xl border border-slate-100 flex flex-col justify-center items-center relative group transition-colors">
-                    <p className="text-[10px] text-slate-400 font-mono font-bold uppercase mb-0.5">Class Teacher</p>
-                    <p className="text-slate-950 font-black text-xs">{currentTeacher ? currentTeacher.name : 'Dr. Meera Nair'}</p>
-                    {isAdmin && (
-                      <select
-                        value={classTeacherId}
-                        onChange={(e) => setClassTeacherId(e.target.value)}
-                        className="absolute inset-0 opacity-0 cursor-pointer print:hidden w-full h-full"
-                        title="Click to assign class teacher"
-                      >
-                        <option value="">-- Assign Teacher --</option>
-                        {faculty.map(f => (
-                          <option key={f.id} value={f.id}>{f.name}</option>
-                        ))}
-                      </select>
-                    )}
-                  </div>
-                </div>
-              </section>
-
-              {/* Timetable Grid Matrix */}
-              <section className="print:m-0">
-                <TimetableGrid
-                  entries={timetableEntries}
-                  allCourses={courses}
-                  allFaculty={faculty}
-                  allRooms={rooms}
-                  allSlots={DEFAULT_SLOTS}
-                  days={DEFAULT_DAYS}
-                  isAdmin={isAdmin}
-                  activeBatchId={activeBatchId}
-                  activeRoomId={activeRoomId}
-                  preferredRoomId={activeRoomId}
-                  onUpdateEntries={handleUpdateEntries}
-                  onShowToast={handleShowToast}
-                  semesterCourseMaps={semesterCourseMaps}
-                  activeSemester={activeBatch ? activeBatch.semester : 1}
-                  mappings={mappings}
-                  batches={batches}
-                  smartFillEnabled={smartFillEnabled}
-                  maxSessionDuration={maxSessionDuration}
-                  onClearGrid={() => setIsClearGridModalOpen(true)}
-                />
-              </section>
-
-              {/* Bottom Faculty Table */}
-              <section className="print:break-inside-avoid">
-                <BottomFacultyTable
-                  entries={activeBatchEntries}
-                  allCourses={courses}
-                  allFaculty={faculty}
-                  roomNumber={activeRoom ? activeRoom.roomNumber : '027'}
-                  mappings={mappings}
-                />
-              </section>
+              <div className="min-w-0 flex-1">
+                <span className="text-[10px] font-bold text-[#64748B] block leading-none mb-0.5">Academic Session</span>
+                <span className="text-xs font-black text-[#0F172A] block leading-tight">2026 – 2027</span>
+                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-[#16A34A] leading-none mt-0.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#16A34A] animate-pulse" />
+                  Active
+                </span>
+              </div>
             </div>
           </div>
+        </aside>
+
+        {/* Mobile Backdrop for Sidebar */}
+        {sidebarMobileOpen && (
+          <div
+            onClick={() => setSidebarMobileOpen(false)}
+            className="fixed inset-0 z-20 bg-black/40 backdrop-blur-xs lg:hidden"
+          />
         )}
+
+        {/* 3. Main Content Area */}
+        <main className="flex-1 min-w-0 p-4 sm:p-6 lg:p-7 space-y-6">
+          {/* VIEW 1: HERO CLASS TIMETABLE */}
+          {activeAppTab === 'timetable' && (
+            <ClassTimetableHeroView
+              activeBatch={activeBatch}
+              batches={batches}
+              onSelectBatch={(batchId) => setActiveBatchId(batchId)}
+              entries={timetableEntries}
+              courses={courses}
+              faculty={faculty}
+              rooms={rooms}
+              mappings={mappings}
+              semesterCourseMaps={semesterCourseMaps}
+              onUpdateEntries={handleUpdateEntries}
+              onAutoGenerate={handleAutoGenerate}
+              onAutoGenerateWithScope={handleAutoGenerateWithScope}
+              onClearGrid={() => setIsClearGridModalOpen(true)}
+              onOpenStudio={() => setActiveAppTab('generator')}
+              onPrint={handlePrint}
+              onDownloadPDF={handleDownloadPDF}
+              onDownloadPNG={handleDownloadPNG}
+              onExportExcel={handleExportExcel}
+              onShowToast={handleShowToast}
+              isAdmin={isAdmin}
+              isGenerating={isGenerating}
+              isFrozen={isCampusFrozen}
+              issueNo={issueNo}
+              onNavigateToTab={(tab) => setActiveAppTab(tab as AppViewTab)}
+            />
+          )}
+
+          {/* VIEW: DASHBOARD & ANALYTICS */}
+          {activeAppTab === 'dashboard' && (
+            <div>
+              <AnalyticsPanel
+                entries={timetableEntries}
+                batches={batches}
+                courses={courses}
+                faculty={faculty}
+                rooms={rooms}
+                activeBatchId={activeBatchId}
+                activeSemester={activeBatch ? activeBatch.semester : 1}
+                semesterCourseMaps={semesterCourseMaps}
+                solverLogs={lastSolverLogs}
+                mappings={mappings}
+                onUpdateEntries={handleUpdateEntries}
+                onShowToast={handleShowToast}
+                adminPermissions={effectiveAdminPerms}
+                isSuperAdmin={isSuperAdmin}
+              />
+            </div>
+          )}
 
         {/* VIEW 2: AUTO GENERATOR & CSP SOLVER STUDIO */}
         {activeAppTab === 'generator' && (
           <div className="space-y-6">
             {/* Header Description */}
-            <div className="bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 text-white p-6 rounded-3xl shadow-md space-y-2">
+            <div className="bg-gradient-to-r from-indigo-900 via-indigo-800 to-slate-900 text-white p-6 rounded-3xl shadow-xl space-y-2">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
                   <div className="p-3 bg-white/10 rounded-2xl backdrop-blur-md">
-                    <Sparkles className="w-6 h-6 text-amber-400" />
+                    <Sparkles className="w-6 h-6 text-amber-300" />
                   </div>
                   <div>
-                    <h2 className="text-lg font-black tracking-tight">Auto Timetable Generator Studio</h2>
+                    <h2 className="text-lg font-black tracking-tight text-white font-cinzel-title">Auto Timetable Generator Studio</h2>
                     <p className="text-xs text-indigo-200">
                       Constraint Satisfaction Problem (CSP) Engine with Backtracking & Exact Faculty Mappings
                     </p>
@@ -1166,7 +1504,7 @@ export default function App() {
 
                 <button
                   onClick={() => setActiveAppTab('timetable')}
-                  className="bg-white/10 hover:bg-white/20 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition-all flex items-center gap-2 cursor-pointer"
+                  className="bg-white hover:bg-slate-100 text-[#4F46E5] font-extrabold text-xs px-4 py-2.5 rounded-xl transition-all flex items-center gap-2 cursor-pointer shadow-md"
                 >
                   <span>View Generated Timetable</span>
                   <ArrowRight className="w-4 h-4" />
@@ -1174,55 +1512,55 @@ export default function App() {
               </div>
             </div>
 
-            {/* Solver Controls Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-              {/* Card 1: Single Batch Generator */}
-              <div className="bg-white border border-slate-200/90 rounded-3xl p-5 shadow-sm space-y-4 flex flex-col justify-between">
+            {/* Solver Controls Grid (4 Distinct Powerful Generation Scopes) */}
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
+              {/* Card 1: Full Campus Master Solver (All Classes) */}
+              <div className="bg-gradient-to-b from-[#EEF2FF] to-white border-2 border-[#4F46E5] rounded-3xl p-5 shadow-sm space-y-4 flex flex-col justify-between relative overflow-hidden">
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="p-2 bg-blue-50 text-blue-600 rounded-xl">
-                      <Calendar className="w-4 h-4" />
+                    <span className="p-2 bg-[#4F46E5] text-white rounded-xl shadow-xs">
+                      <Building className="w-4 h-4" />
                     </span>
-                    <span className="text-[11px] font-mono font-bold bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md">
-                      Target: {activeBatch?.name}
+                    <span className="text-[10px] font-mono font-extrabold bg-[#4F46E5] text-white px-2.5 py-0.5 rounded-full uppercase">
+                      Campus-Wide
                     </span>
                   </div>
-                  <h3 className="font-black text-slate-900 text-sm">Single Section Solver</h3>
-                  <p className="text-xs text-slate-500 leading-relaxed">
-                    Compute a 100% conflict-free weekly schedule for <strong>{activeBatch?.name}</strong> based strictly on required curriculum hours and mapped specialists.
+                  <h3 className="font-black text-[#0F172A] text-sm">All Classes & Batches</h3>
+                  <p className="text-xs text-[#64748B] leading-relaxed">
+                    Simultaneously schedule <strong>ALL {batches.length} classes</strong> across 8 semesters with 0 faculty or room clashes.
                   </p>
                 </div>
 
                 <button
-                  onClick={handleAutoGenerate}
-                  disabled={isGenerating}
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs py-3 rounded-2xl transition-all shadow-md shadow-blue-500/20 flex items-center justify-center gap-2 cursor-pointer active:scale-98"
+                  onClick={handleAutoGenerateAllClasses}
+                  disabled={isGenerating || isCampusFrozen}
+                  className="w-full bg-[#4F46E5] hover:bg-[#4338CA] text-white font-extrabold text-xs py-3 rounded-2xl transition-all shadow-md shadow-indigo-500/20 flex items-center justify-center gap-2 cursor-pointer active:scale-98 disabled:opacity-60"
                 >
                   <Sparkles className={`w-4 h-4 ${isGenerating ? 'animate-spin' : ''}`} />
-                  {isGenerating ? 'Solving Section...' : `Generate for ${activeBatch?.name}`}
+                  {isGenerating ? 'Solving All Classes...' : `Solve All ${batches.length} Classes`}
                 </button>
               </div>
 
               {/* Card 2: Multi-Section Semester Solver */}
-              <div className="bg-white border border-slate-200/90 rounded-3xl p-5 shadow-sm space-y-4 flex flex-col justify-between">
+              <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-sm space-y-4 flex flex-col justify-between">
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="p-2 bg-purple-50 text-purple-600 rounded-xl">
+                    <span className="p-2 bg-purple-50 text-[#8B5CF6] rounded-xl border border-purple-100">
                       <Layers className="w-4 h-4" />
                     </span>
-                    <span className="text-[11px] font-mono font-bold bg-purple-50 text-purple-700 px-2 py-0.5 rounded-md">
+                    <span className="text-[11px] font-mono font-bold bg-purple-50 text-[#6D28D9] px-2 py-0.5 rounded-md border border-purple-100">
                       Parallel Multi-Section
                     </span>
                   </div>
-                  <h3 className="font-black text-slate-900 text-sm">Simultaneous Semester Solver</h3>
-                  <p className="text-xs text-slate-500 leading-relaxed">
+                  <h3 className="font-black text-[#0F172A] text-sm">Simultaneous Semester Solver</h3>
+                  <p className="text-xs text-[#64748B] leading-relaxed">
                     Solve multiple parallel sections at once while synchronizing shared faculty, laboratory spaces, and classroom capacities.
                   </p>
 
                   <select
                     value={selectedGenSemester}
                     onChange={(e) => setSelectedGenSemester(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 text-slate-800 font-bold text-xs rounded-xl p-2 focus:outline-none focus:ring-2 focus:ring-purple-500 cursor-pointer"
+                    className="w-full bg-slate-50 border border-slate-200 text-[#0F172A] font-bold text-xs rounded-xl p-2.5 focus:outline-none focus:ring-2 focus:ring-[#8B5CF6] cursor-pointer"
                   >
                     <option value="8">Semester VIII (5 Sections)</option>
                     <option value="7">Semester VII (7 Sections)</option>
@@ -1232,33 +1570,60 @@ export default function App() {
                     <option value="3">Semester III (5 Sections)</option>
                     <option value="2">Semester II (4 Sections)</option>
                     <option value="1">Semester I (4 Sections)</option>
-                    <option value="all">Full Campus (All 8 Semesters - 40 Batches)</option>
+                    <option value="all">Full Campus (All 8 Semesters)</option>
                   </select>
                 </div>
 
                 <button
                   onClick={() => handleAutoGenerateSemester()}
-                  disabled={isGenerating}
-                  className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-extrabold text-xs py-3 rounded-2xl transition-all shadow-md shadow-purple-500/20 flex items-center justify-center gap-2 cursor-pointer active:scale-98"
+                  disabled={isGenerating || isCampusFrozen}
+                  className="w-full bg-[#8B5CF6] hover:bg-[#7C3AED] text-white font-extrabold text-xs py-3 rounded-2xl transition-all shadow-md shadow-purple-500/20 flex items-center justify-center gap-2 cursor-pointer active:scale-98 disabled:opacity-60"
                 >
                   <Layers className={`w-4 h-4 ${isGenerating ? 'animate-pulse' : ''}`} />
                   {isGenerating ? 'Solving All Sections...' : 'Solve All Selected Sections'}
                 </button>
               </div>
 
-              {/* Card 3: Conflict Fixer & Policy Settings */}
-              <div className="bg-white border border-slate-200/90 rounded-3xl p-5 shadow-sm space-y-4 flex flex-col justify-between">
+              {/* Card 3: Single Batch Generator */}
+              <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-sm space-y-4 flex flex-col justify-between">
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="p-2 bg-amber-50 text-amber-600 rounded-xl">
+                    <span className="p-2 bg-blue-50 text-[#3B82F6] rounded-xl border border-blue-100">
+                      <Calendar className="w-4 h-4" />
+                    </span>
+                    <span className="text-[11px] font-mono font-bold bg-slate-100 text-[#0F172A] px-2 py-0.5 rounded-md border border-slate-200">
+                      Target: {activeBatch?.name}
+                    </span>
+                  </div>
+                  <h3 className="font-black text-[#0F172A] text-sm">Single Section Solver</h3>
+                  <p className="text-xs text-[#64748B] leading-relaxed">
+                    Compute a 100% conflict-free weekly schedule for <strong className="text-[#0F172A]">{activeBatch?.name}</strong> based strictly on required curriculum hours and mapped specialists.
+                  </p>
+                </div>
+
+                <button
+                  onClick={handleAutoGenerate}
+                  disabled={isGenerating || isCampusFrozen}
+                  className="w-full bg-slate-900 hover:bg-slate-800 text-white font-extrabold text-xs py-3 rounded-2xl transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer active:scale-98 disabled:opacity-60"
+                >
+                  <Sparkles className={`w-4 h-4 ${isGenerating ? 'animate-spin' : ''}`} />
+                  {isGenerating ? 'Solving Section...' : `Generate for ${activeBatch?.name}`}
+                </button>
+              </div>
+
+              {/* Card 4: Conflict Fixer & Policy Settings */}
+              <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-sm space-y-4 flex flex-col justify-between">
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="p-2 bg-amber-50 text-[#D97706] rounded-xl border border-amber-100">
                       <Zap className="w-4 h-4" />
                     </span>
-                    <span className="text-[11px] font-mono font-bold bg-amber-50 text-amber-700 px-2 py-0.5 rounded-md">
+                    <span className="text-[11px] font-mono font-bold bg-amber-50 text-[#92400E] px-2 py-0.5 rounded-md border border-amber-100">
                       Conflict Reliever
                     </span>
                   </div>
-                  <h3 className="font-black text-slate-900 text-sm">Conflict Fixer & Duration Policy</h3>
-                  <p className="text-xs text-slate-500 leading-relaxed">
+                  <h3 className="font-black text-[#0F172A] text-sm">Conflict Fixer & Duration Policy</h3>
+                  <p className="text-xs text-[#64748B] leading-relaxed">
                     Auto-relocate any manual overlaps. Set maximum block duration limit:
                   </p>
 
@@ -1270,7 +1635,7 @@ export default function App() {
                       localStorage.setItem('apollo_max_session_duration', val.toString());
                       handleShowToast('info', 'Policy Updated', `Max block set to ${val} hours.`);
                     }}
-                    className="w-full bg-slate-50 border border-slate-200 text-slate-800 font-bold text-xs rounded-xl p-2 focus:outline-none focus:ring-2 focus:ring-amber-500 cursor-pointer"
+                    className="w-full bg-slate-50 border border-slate-200 text-[#0F172A] font-bold text-xs rounded-xl p-2.5 focus:outline-none focus:ring-2 focus:ring-[#D4A72C] cursor-pointer"
                   >
                     <option value={2}>Max 2 Continuous Hours (Standard)</option>
                     <option value={3}>Allow 3 Hours (Extended Workshops)</option>
@@ -1281,14 +1646,14 @@ export default function App() {
                 <div className="flex gap-2">
                   <button
                     onClick={handleAutoFixConflicts}
-                    className="flex-1 bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs py-3 rounded-2xl transition-all shadow-sm flex items-center justify-center gap-1.5 cursor-pointer"
+                    className="flex-1 bg-[#D4A72C] hover:bg-[#B88E1F] text-white font-black text-xs py-3 rounded-2xl transition-all shadow-md shadow-amber-500/20 flex items-center justify-center gap-1.5 cursor-pointer"
                   >
                     <Zap className="w-3.5 h-3.5 fill-current" />
                     Fix Overlaps
                   </button>
                   <button
                     onClick={handleClearTimetable}
-                    className="px-3.5 py-3 border border-slate-200 hover:bg-rose-50 text-rose-600 rounded-2xl transition-all text-xs font-bold cursor-pointer"
+                    className="px-3.5 py-3 border border-rose-200 bg-[#FEF2F2] hover:bg-[#FEE2E2] text-[#DC2626] rounded-2xl transition-all text-xs font-bold cursor-pointer"
                     title="Clear unlocked slots"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -1298,10 +1663,10 @@ export default function App() {
             </div>
 
             {/* Live Solver Execution Logs Console */}
-            <div className="bg-slate-950 text-slate-100 rounded-3xl border border-slate-800 p-6 shadow-xl space-y-4">
+            <div className="bg-slate-900 text-slate-100 rounded-3xl border border-slate-800 p-6 shadow-xl space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-4">
                 <div className="flex items-center gap-2.5">
-                  <div className="p-2 bg-indigo-900/60 text-indigo-400 rounded-xl">
+                  <div className="p-2 bg-indigo-900/60 text-indigo-400 rounded-xl border border-indigo-700/50">
                     <Terminal className="w-4 h-4" />
                   </div>
                   <div>
@@ -1311,13 +1676,13 @@ export default function App() {
                 </div>
 
                 {/* Log Filter Pills */}
-                <div className="flex items-center gap-1 bg-slate-900 p-1 rounded-xl border border-slate-800">
+                <div className="flex items-center gap-1 bg-[#070b14] p-1 rounded-xl border border-slate-800">
                   {(['all', 'placed', 'backtrack', 'conflict', 'info'] as const).map(flt => (
                     <button
                       key={flt}
                       onClick={() => setSolverLogFilter(flt)}
                       className={`text-[10px] font-mono uppercase font-bold px-2.5 py-1 rounded-lg transition-colors cursor-pointer ${
-                        solverLogFilter === flt ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'
+                        solverLogFilter === flt ? 'bg-[#4F46E5] text-white font-black' : 'text-slate-400 hover:text-white'
                       }`}
                     >
                       {flt}
@@ -1345,7 +1710,7 @@ export default function App() {
                             ? 'bg-amber-950/40 border-amber-800/60 text-amber-300'
                             : log.type === 'conflict'
                             ? 'bg-rose-950/40 border-rose-800/60 text-rose-300'
-                            : 'bg-slate-900 border-slate-800 text-slate-300'
+                            : 'bg-[#0a0f1d] border-slate-800 text-slate-300'
                         }`}
                       >
                         <span className="text-[10px] px-1.5 py-0.2 rounded font-bold uppercase bg-white/10 text-white shrink-0">
@@ -1362,7 +1727,7 @@ export default function App() {
         )}
 
         {/* VIEW 3: HEALTH & 24-CONSTRAINT AUDIT */}
-        {activeAppTab === 'analytics' && (
+        {(activeAppTab === 'constraints' || activeAppTab === 'analytics') && (
           <div>
             <AnalyticsPanel
               entries={timetableEntries}
@@ -1377,6 +1742,8 @@ export default function App() {
               mappings={mappings}
               onUpdateEntries={handleUpdateEntries}
               onShowToast={handleShowToast}
+              adminPermissions={effectiveAdminPerms}
+              isSuperAdmin={isSuperAdmin}
             />
           </div>
         )}
@@ -1385,14 +1752,14 @@ export default function App() {
         {activeAppTab === 'faculty' && (
           <div className="space-y-6">
             {/* View Switcher Sub-Tabs */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-white/95 backdrop-blur-md border border-slate-200/90 p-2.5 rounded-2xl shadow-2xs print:hidden">
-              <div className="flex items-center gap-1.5 p-1 bg-slate-100/80 rounded-xl border border-slate-200/70">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-white border border-slate-200 p-2.5 rounded-2xl shadow-sm print:hidden">
+              <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-xl border border-slate-200">
                 <button
                   onClick={() => setFacultySubTab('schedule')}
                   className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-extrabold transition-all cursor-pointer ${
                     facultySubTab === 'schedule'
-                      ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-xs'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                      ? 'bg-[#10B981] text-white shadow-xs'
+                      : 'text-[#64748B] hover:text-[#0F172A] hover:bg-slate-200/60'
                   }`}
                 >
                   <Calendar className="w-3.5 h-3.5" />
@@ -1403,8 +1770,8 @@ export default function App() {
                   onClick={() => setFacultySubTab('directory')}
                   className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-extrabold transition-all cursor-pointer ${
                     facultySubTab === 'directory'
-                      ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-xs'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                      ? 'bg-[#10B981] text-white shadow-xs'
+                      : 'text-[#64748B] hover:text-[#0F172A] hover:bg-slate-200/60'
                   }`}
                 >
                   <Users className="w-3.5 h-3.5" />
@@ -1412,9 +1779,9 @@ export default function App() {
                 </button>
               </div>
 
-              <div className="text-xs font-bold text-slate-500 pr-3 font-mono hidden sm:flex items-center gap-2">
+              <div className="text-xs font-bold text-[#64748B] pr-3 font-mono hidden sm:flex items-center gap-2">
                 <span>Registered Faculty:</span>
-                <span className="text-indigo-700 bg-indigo-50 border border-indigo-100 px-2 py-0.5 rounded-md font-extrabold">
+                <span className="text-[#047857] bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md font-extrabold">
                   {faculty.length} Members
                 </span>
               </div>
@@ -1451,6 +1818,9 @@ export default function App() {
                 smartFillEnabled={smartFillEnabled}
                 onToggleSmartFill={handleToggleSmartFill}
                 activeTab="faculty"
+                isSuperAdmin={isSuperAdmin}
+                isFrozen={isCampusFrozen}
+                adminPermissions={effectiveAdminPerms}
               />
             )}
           </div>
@@ -1478,6 +1848,9 @@ export default function App() {
               smartFillEnabled={smartFillEnabled}
               onToggleSmartFill={handleToggleSmartFill}
               activeTab="curriculum"
+              isSuperAdmin={isSuperAdmin}
+              isFrozen={isCampusFrozen}
+              adminPermissions={effectiveAdminPerms}
             />
           </div>
         )}
@@ -1486,14 +1859,14 @@ export default function App() {
         {activeAppTab === 'rooms' && (
           <div className="space-y-6">
             {/* Sub-Tab Navigation Bar */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-white/95 backdrop-blur-md border border-slate-200/90 p-2.5 rounded-2xl shadow-2xs print:hidden">
-              <div className="flex items-center gap-1.5 p-1 bg-slate-100/80 rounded-xl border border-slate-200/70">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-white border border-slate-200 p-2.5 rounded-2xl shadow-sm print:hidden">
+              <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-xl border border-slate-200">
                 <button
                   onClick={() => setRoomsSubTab('occupancy')}
                   className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-extrabold transition-all cursor-pointer ${
                     roomsSubTab === 'occupancy'
-                      ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-xs'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                      ? 'bg-[#3B82F6] text-white shadow-xs'
+                      : 'text-[#64748B] hover:text-[#0F172A] hover:bg-slate-200/60'
                   }`}
                 >
                   <Calendar className="w-3.5 h-3.5" />
@@ -1504,8 +1877,8 @@ export default function App() {
                   onClick={() => setRoomsSubTab('manager')}
                   className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-extrabold transition-all cursor-pointer ${
                     roomsSubTab === 'manager'
-                      ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-xs'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                      ? 'bg-[#3B82F6] text-white shadow-xs'
+                      : 'text-[#64748B] hover:text-[#0F172A] hover:bg-slate-200/60'
                   }`}
                 >
                   <Warehouse className="w-3.5 h-3.5" />
@@ -1513,9 +1886,9 @@ export default function App() {
                 </button>
               </div>
 
-              <div className="text-xs font-bold text-slate-500 pr-3 font-mono hidden sm:flex items-center gap-2">
+              <div className="text-xs font-bold text-[#64748B] pr-3 font-mono hidden sm:flex items-center gap-2">
                 <span>Total Infrastructure:</span>
-                <span className="text-emerald-700 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-md font-extrabold">
+                <span className="text-[#1D4ED8] bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-md font-extrabold">
                   {rooms.length} Spaces ({rooms.filter(r => r.type === 'Theory').length} Theory, {rooms.filter(r => r.type === 'Lab').length} Labs)
                 </span>
               </div>
@@ -1552,6 +1925,9 @@ export default function App() {
                 smartFillEnabled={smartFillEnabled}
                 onToggleSmartFill={handleToggleSmartFill}
                 activeTab="rooms"
+                isSuperAdmin={isSuperAdmin}
+                isFrozen={isCampusFrozen}
+                adminPermissions={effectiveAdminPerms}
               />
             )}
           </div>
@@ -1579,12 +1955,15 @@ export default function App() {
               smartFillEnabled={smartFillEnabled}
               onToggleSmartFill={handleToggleSmartFill}
               activeTab="parallel-diagnostics"
+              isSuperAdmin={isSuperAdmin}
+              isFrozen={isCampusFrozen}
+              adminPermissions={effectiveAdminPerms}
             />
           </div>
         )}
 
         {/* VIEW 8: BATCHES & SECTIONS */}
-        {activeAppTab === 'batches' && (
+        {(activeAppTab === 'sections' || activeAppTab === 'batches') && (
           <div>
             <AdminPanel
               batches={batches}
@@ -1605,12 +1984,15 @@ export default function App() {
               smartFillEnabled={smartFillEnabled}
               onToggleSmartFill={handleToggleSmartFill}
               activeTab="batches"
+              isSuperAdmin={isSuperAdmin}
+              isFrozen={isCampusFrozen}
+              adminPermissions={effectiveAdminPerms}
             />
           </div>
         )}
 
-        {/* VIEW 9: ACADEMIC REGULATIONS */}
-        {activeAppTab === 'regulations' && (
+        {/* VIEW 9: ACADEMIC REGULATIONS & REPORTS */}
+        {(activeAppTab === 'reports' || activeAppTab === 'regulations') && (
           <div>
             <AdminPanel
               batches={batches}
@@ -1631,17 +2013,52 @@ export default function App() {
               smartFillEnabled={smartFillEnabled}
               onToggleSmartFill={handleToggleSmartFill}
               activeTab="docs"
+              isSuperAdmin={isSuperAdmin}
+              isFrozen={isCampusFrozen}
+              adminPermissions={effectiveAdminPerms}
             />
           </div>
         )}
 
-      </main>
+        {/* VIEW 10: SETTINGS & SUPER ADMIN GOVERNANCE HUB */}
+        {(activeAppTab === 'settings' || activeAppTab === 'superadmin') && (
+          <div>
+            <SuperAdminHub
+              currentUser={currentUser}
+              userAccounts={userAccounts}
+              onUpdateUserAccounts={handleUpdateUserAccounts}
+              policies={systemPolicies}
+              onUpdatePolicies={handleUpdatePolicies}
+              auditLogs={auditLogs}
+              onUpdateAuditLogs={handleUpdateAuditLogs}
+              batches={batches}
+              faculty={faculty}
+              courses={courses}
+              rooms={rooms}
+              mappings={mappings}
+              semesterCourseMaps={semesterCourseMaps}
+              entries={timetableEntries}
+              onUpdateBatches={handleUpdateBatches}
+              onUpdateFaculty={handleUpdateFaculty}
+              onUpdateCourses={handleUpdateCourses}
+              onUpdateRooms={handleUpdateRooms}
+              onUpdateMappings={handleUpdateMappings}
+              onUpdateSemesterCourseMaps={handleUpdateSemesterCourseMaps}
+              onUpdateEntries={handleUpdateEntries}
+              onShowToast={handleShowToast}
+              onNavigateToTab={(t) => setActiveAppTab(t as AppViewTab)}
+            />
+          </div>
+        )}
+
+        </main>
+      </div>
 
       {/* Footer Branding */}
-      <footer className="bg-slate-100 border-t border-slate-200 py-6 px-6 text-center text-xs text-slate-500 mt-12 print:hidden">
-        <p>© 2026 Time Table Management. School of Technology. All Rights Reserved.</p>
+      <footer className="bg-white border-t border-slate-200 py-6 px-6 text-center text-xs text-[#64748B] mt-12 print:hidden">
+        <p>© 2026 TimePro — Timetable Management System. All Rights Reserved.</p>
         <p className="mt-1 text-[10px] text-slate-400">
-          Powered by Constraint Satisfaction Backtracking (CSP) Engine. Designed for desktop browsers.
+          Powered by Constraint Satisfaction Backtracking (CSP) Engine • Role-Based Governance v2.5
         </p>
       </footer>
 
@@ -1651,26 +2068,26 @@ export default function App() {
       {/* 100% Iframe-safe Custom Confirmation Dialog */}
       <AnimatePresence>
         {confirmDialog.isOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm">
             <motion.div
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-white rounded-2xl border border-slate-100 p-6 max-w-md w-full shadow-2xl space-y-4"
+              className="bg-white rounded-3xl border border-slate-200 p-6 max-w-md w-full shadow-2xl space-y-4"
             >
-              <h3 className="text-sm font-bold text-slate-950 flex items-center gap-2">
-                <span className="p-1.5 bg-amber-50 text-amber-600 rounded-lg">
+              <h3 className="text-sm font-bold text-[#0F172A] flex items-center gap-2">
+                <span className="p-1.5 bg-amber-50 text-[#D97706] rounded-lg border border-amber-200">
                   <HelpCircle className="w-5 h-5" />
                 </span>
                 {confirmDialog.title}
               </h3>
-              <p className="text-xs text-slate-600 leading-relaxed">
+              <p className="text-xs text-[#64748B] leading-relaxed">
                 {confirmDialog.message}
               </p>
               <div className="flex justify-end gap-3 pt-2">
                 <button
                   onClick={() => setConfirmDialog(prev => ({ ...prev, isOpen: false }))}
-                  className="px-4 py-2 rounded-xl border border-slate-200 text-slate-700 font-semibold hover:bg-slate-50 text-xs transition-colors cursor-pointer"
+                  className="px-4 py-2 rounded-xl border border-slate-200 text-[#475569] font-semibold hover:bg-slate-50 text-xs transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
@@ -1678,7 +2095,7 @@ export default function App() {
                   onClick={() => {
                     confirmDialog.onConfirm();
                   }}
-                  className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition-colors shadow-sm cursor-pointer"
+                  className="px-4 py-2 rounded-xl bg-[#4F46E5] hover:bg-[#4338CA] text-white font-black text-xs transition-colors shadow-md shadow-indigo-500/20 cursor-pointer"
                 >
                   Confirm Action
                 </button>
@@ -1696,6 +2113,17 @@ export default function App() {
         onClearSection={handleClearSection}
         onClearAndGenerateNew={handleClearAndGenerateNew}
         onClearAllUniversity={handleClearAllUniversity}
+      />
+
+      {/* Role & Persona Switcher Authentication Modal */}
+      <RoleSwitchModal
+        isOpen={isRoleModalOpen}
+        onClose={() => setIsRoleModalOpen(false)}
+        currentUser={currentUser}
+        userAccounts={userAccounts}
+        onSelectUser={handleSelectUser}
+        onShowToast={handleShowToast}
+        onLogout={handleLogout}
       />
     </div>
   );

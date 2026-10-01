@@ -37,32 +37,32 @@ export default function ClearGridModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in print:hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-fade-in print:hidden">
       <motion.div
         initial={{ scale: 0.95, opacity: 0, y: 10 }}
         animate={{ scale: 1, opacity: 1, y: 0 }}
         exit={{ scale: 0.95, opacity: 0, y: 10 }}
-        className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-7 max-w-lg w-full shadow-2xl space-y-6 overflow-hidden"
+        className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-7 max-w-lg w-full shadow-2xl space-y-6 overflow-hidden text-[#0F172A]"
       >
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+        <div className="flex items-center justify-between border-b border-slate-200 pb-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-rose-50 border border-rose-100 flex items-center justify-center text-rose-600 shadow-2xs">
+            <div className="w-10 h-10 rounded-2xl bg-rose-50 border border-rose-200 flex items-center justify-center text-[#DC2626] shadow-xs">
               <Trash2 className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-base font-black text-slate-900 tracking-tight">
+              <h3 className="text-base font-black text-[#0F172A] tracking-tight font-cinzel-title">
                 Clear Timetable Grid
               </h3>
-              <p className="text-xs text-slate-500 font-medium mt-0.5">
-                Target Section: <span className="font-bold text-indigo-700">{activeBatch?.name || 'Current Section'}</span>
+              <p className="text-xs text-[#64748B] font-medium mt-0.5">
+                Target Section: <span className="font-bold text-[#4F46E5]">{activeBatch?.name || 'Current Section'}</span>
               </p>
             </div>
           </div>
 
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 hover:text-slate-800 transition-colors cursor-pointer"
+            className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 hover:text-[#0F172A] transition-colors cursor-pointer border border-slate-200"
           >
             <X className="w-4 h-4" />
           </button>
@@ -76,39 +76,39 @@ export default function ClearGridModal({
               onClearAndGenerateNew();
               onClose();
             }}
-            className="w-full text-left p-4 rounded-2xl border-2 border-indigo-600 bg-gradient-to-r from-blue-50/70 via-indigo-50/50 to-white hover:from-blue-100/60 hover:to-indigo-50 transition-all cursor-pointer group shadow-sm flex items-start justify-between gap-3"
+            className="w-full text-left p-4 rounded-2xl border border-indigo-200 bg-[#EEF2FF]/70 hover:bg-[#EEF2FF] transition-all cursor-pointer group shadow-xs flex items-start justify-between gap-3"
           >
             <div className="space-y-1">
               <div className="flex items-center gap-2">
-                <span className="p-1 rounded-lg bg-indigo-600 text-white">
+                <span className="p-1 rounded-lg bg-[#4F46E5] text-white font-black">
                   <Sparkles className="w-3.5 h-3.5" />
                 </span>
-                <span className="font-black text-xs text-slate-900 group-hover:text-indigo-700 transition-colors">
+                <span className="font-black text-xs text-[#0F172A] group-hover:text-[#4F46E5] transition-colors">
                   Clear & Generate New Timetable
                 </span>
-                <span className="text-[10px] bg-indigo-600 text-white font-extrabold px-2 py-0.2 rounded-full font-mono">
+                <span className="text-[10px] bg-[#4F46E5] text-white font-extrabold px-2 py-0.2 rounded-full font-mono">
                   Recommended
                 </span>
               </div>
-              <p className="text-[11px] text-slate-600 leading-relaxed pl-7">
+              <p className="text-[11px] text-[#64748B] leading-relaxed pl-7">
                 Wipes current section slots and immediately runs the CSP solver to build a fresh, 100% conflict-free schedule with newly optimized allocations.
               </p>
             </div>
           </button>
 
           {/* OPTION 2: Clear Current Section Only (Blank Canvas) */}
-          <div className="p-4 rounded-2xl border border-slate-200 hover:border-slate-300 bg-slate-50/50 hover:bg-slate-50 transition-all space-y-2.5">
+          <div className="p-4 rounded-2xl border border-slate-200 bg-slate-50 hover:bg-slate-100/80 transition-all space-y-2.5">
             <div className="flex items-start justify-between gap-3">
               <div className="space-y-0.5">
                 <div className="flex items-center gap-2">
                   <span className="p-1 rounded-lg bg-slate-200 text-slate-700">
                     <RotateCcw className="w-3.5 h-3.5" />
                   </span>
-                  <span className="font-black text-xs text-slate-900">
+                  <span className="font-black text-xs text-[#0F172A]">
                     Clear Current Section (Blank Grid)
                   </span>
                 </div>
-                <p className="text-[11px] text-slate-500 leading-relaxed pl-7">
+                <p className="text-[11px] text-[#64748B] leading-relaxed pl-7">
                   Clears all scheduled slots for {activeBatch?.name || 'this section'} so you can drag-and-drop courses manually from scratch.
                 </p>
               </div>
@@ -118,36 +118,36 @@ export default function ClearGridModal({
                   onClearSection(keepLocked);
                   onClose();
                 }}
-                className="shrink-0 px-3.5 py-1.5 rounded-xl text-xs font-bold text-slate-700 bg-white hover:bg-slate-100 border border-slate-200 shadow-2xs transition-all cursor-pointer"
+                className="shrink-0 px-3.5 py-1.5 rounded-xl text-xs font-bold text-[#DC2626] bg-[#FEF2F2] hover:bg-[#FEE2E2] border border-[#FECACA] shadow-2xs transition-all cursor-pointer"
               >
                 Clear Section
               </button>
             </div>
 
             {/* Keep locked sessions toggle */}
-            <label className="flex items-center gap-2 pl-7 pt-1 text-[11px] font-semibold text-slate-600 cursor-pointer select-none">
+            <label className="flex items-center gap-2 pl-7 pt-1 text-[11px] font-semibold text-[#64748B] cursor-pointer select-none">
               <input
                 type="checkbox"
                 checked={keepLocked}
                 onChange={e => setKeepLocked(e.target.checked)}
-                className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                className="rounded border-slate-300 text-[#4F46E5] focus:ring-[#4F46E5] cursor-pointer"
               />
               <span>Preserve locked sessions as fixed anchors</span>
             </label>
           </div>
 
           {/* OPTION 3: Clear All University Batches */}
-          <div className="p-4 rounded-2xl border border-rose-100 bg-rose-50/40 hover:bg-rose-50/60 transition-all flex items-start justify-between gap-3">
+          <div className="p-4 rounded-2xl border border-rose-200 bg-[#FEF2F2]/60 hover:bg-[#FEF2F2] transition-all flex items-start justify-between gap-3">
             <div className="space-y-0.5">
               <div className="flex items-center gap-2">
-                <span className="p-1 rounded-lg bg-rose-100 text-rose-700">
+                <span className="p-1 rounded-lg bg-rose-200 text-rose-800">
                   <Building className="w-3.5 h-3.5" />
                 </span>
-                <span className="font-black text-xs text-rose-950">
+                <span className="font-black text-xs text-rose-900">
                   Clear Entire University Timetable
                 </span>
               </div>
-              <p className="text-[11px] text-rose-800/80 leading-relaxed pl-7">
+              <p className="text-[11px] text-rose-700/80 leading-relaxed pl-7">
                 Wipes scheduled periods across all 8 semesters (40 parallel sections).
               </p>
             </div>
@@ -157,7 +157,7 @@ export default function ClearGridModal({
                 onClearAllUniversity();
                 onClose();
               }}
-              className="shrink-0 px-3.5 py-1.5 rounded-xl text-xs font-bold text-rose-700 bg-white hover:bg-rose-100 border border-rose-200 shadow-2xs transition-all cursor-pointer"
+              className="shrink-0 px-3.5 py-1.5 rounded-xl text-xs font-bold text-white bg-[#DC2626] hover:bg-[#B91C1C] border border-rose-600 shadow-2xs transition-all cursor-pointer"
             >
               Clear All
             </button>
@@ -165,13 +165,13 @@ export default function ClearGridModal({
         </div>
 
         {/* Footer info */}
-        <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
-          <span className="flex items-center gap-1 text-slate-500 font-medium">
-            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> Auto-saves state automatically
+        <div className="pt-3 border-t border-slate-200 flex items-center justify-between text-[11px] text-[#64748B]">
+          <span className="flex items-center gap-1 text-[#047857] font-medium">
+            <CheckCircle2 className="w-3.5 h-3.5 text-[#10B981]" /> Auto-saves state automatically
           </span>
           <button
             onClick={onClose}
-            className="text-xs font-bold text-slate-600 hover:text-slate-900 cursor-pointer px-2 py-1"
+            className="text-xs font-bold text-[#64748B] hover:text-[#0F172A] cursor-pointer px-2 py-1"
           >
             Cancel
           </button>

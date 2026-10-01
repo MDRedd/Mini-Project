@@ -118,7 +118,69 @@ export const DEFAULT_FACULTY: Faculty[] = [
   { id: 'fac-37', name: 'Mr. Manoj Reddy', phone: '9742713937', maxHoursPerDay: 4, specialization: 'AR/VR & Game Development', division: 'Professional Studies Division', designation: 'Assistant Professor' },
   { id: 'fac-38', name: 'Dr. Geetha Srinivas', phone: '9742713938', maxHoursPerDay: 4, specialization: 'Entrepreneurship & Management', division: 'Professional Studies Division', designation: 'Professor' },
   { id: 'fac-39', name: 'Dr. Sunil Kumar', phone: '9742713939', maxHoursPerDay: 4, specialization: 'Professional Development', division: 'Professional Studies Division', designation: 'Professor' },
-  { id: 'fac-40', name: 'Dr. Swathi Reddy', phone: '9742713940', maxHoursPerDay: 4, specialization: 'Projects & Industry Relations', division: 'Professional Studies Division', designation: 'Professor' }
+  { id: 'fac-40', name: 'Dr. Swathi Reddy', phone: '9742713940', maxHoursPerDay: 4, specialization: 'Projects & Industry Relations', division: 'Professional Studies Division', designation: 'Professor' },
+
+  // 41-50: Advanced AI, Data Science & Machine Learning Division
+  { id: 'fac-41', name: 'Dr. Vikramaditya Sen', phone: '9845100041', maxHoursPerDay: 4, specialization: 'Advanced Machine Learning', division: 'Data Science Division', designation: 'Professor' },
+  { id: 'fac-42', name: 'Dr. Anjali Deshmukh', phone: '9845100042', maxHoursPerDay: 4, specialization: 'Natural Language Processing', division: 'Data Science Division', designation: 'Associate Professor' },
+  { id: 'fac-43', name: 'Mr. Abhinav Saxena', phone: '9845100043', maxHoursPerDay: 4, specialization: 'Deep Learning & Neural Networks', division: 'Data Science Division', designation: 'Assistant Professor' },
+  { id: 'fac-44', name: 'Dr. Ritu Chatterjee', phone: '9845100044', maxHoursPerDay: 4, specialization: 'Computer Vision & Biometrics', division: 'Data Science Division', designation: 'Professor' },
+  { id: 'fac-45', name: 'Mr. Sandeep Kulkarni', phone: '9845100045', maxHoursPerDay: 4, specialization: 'Big Data & Hadoop Ecosystem', division: 'Data Science Division', designation: 'Assistant Professor' },
+  { id: 'fac-46', name: 'Dr. Nandini Sundaram', phone: '9845100046', maxHoursPerDay: 4, specialization: 'Data Warehousing & Mining', division: 'Data Science Division', designation: 'Professor' },
+  { id: 'fac-47', name: 'Mr. Tanmay Mukherjee', phone: '9845100047', maxHoursPerDay: 4, specialization: 'Data Analytics with R & Python', division: 'Data Science Division', designation: 'Assistant Professor' },
+  { id: 'fac-48', name: 'Dr. Siddharth Bhattacharya', phone: '9845100048', maxHoursPerDay: 4, specialization: 'Generative AI & LLMs', division: 'Data Science Division', designation: 'Associate Professor' },
+  { id: 'fac-49', name: 'Ms. Ishita Banerjee', phone: '9845100049', maxHoursPerDay: 4, specialization: 'Predictive Modeling & Statistics', division: 'Data Science Division', designation: 'Assistant Professor' },
+  { id: 'fac-50', name: 'Dr. Hemant Trivedi', phone: '9845100050', maxHoursPerDay: 4, specialization: 'Pattern Recognition & Intelligent Systems', division: 'Data Science Division', designation: 'Professor' },
+
+  // 51-60: Networks, Cloud Infrastructure & Cyber Security Division
+  { id: 'fac-51', name: 'Dr. Saurabh Mishra', phone: '9845100051', maxHoursPerDay: 4, specialization: 'Cloud Architecture & Microservices', division: 'Networks & Security Division', designation: 'Professor' },
+  { id: 'fac-52', name: 'Ms. Shruti Roy', phone: '9845100052', maxHoursPerDay: 4, specialization: 'DevOps & Container Orchestration', division: 'Networks & Security Division', designation: 'Assistant Professor' },
+  { id: 'fac-53', name: 'Dr. Gaurav Aggarwal', phone: '9845100053', maxHoursPerDay: 4, specialization: 'Cyber Forensics & Incident Response', division: 'Networks & Security Division', designation: 'Associate Professor' },
+  { id: 'fac-54', name: 'Mr. Pranav Nambiar', phone: '9845100054', maxHoursPerDay: 4, specialization: 'Ethical Hacking & Penetration Testing', division: 'Networks & Security Division', designation: 'Assistant Professor' },
+  { id: 'fac-55', name: 'Dr. Malini Subramanian', phone: '9845100055', maxHoursPerDay: 4, specialization: 'Applied Cryptography & Network Security', division: 'Networks & Security Division', designation: 'Professor' },
+  { id: 'fac-56', name: 'Mr. Rohan Kapoor', phone: '9845100056', maxHoursPerDay: 4, specialization: 'Software-Defined Networks & TCP/IP', division: 'Networks & Security Division', designation: 'Assistant Professor' },
+  { id: 'fac-57', name: 'Dr. Alok Nath', phone: '9845100057', maxHoursPerDay: 4, specialization: 'IoT Edge Computing & Sensor Networks', division: 'Networks & Security Division', designation: 'Associate Professor' },
+  { id: 'fac-58', name: 'Ms. Radhika Pillai', phone: '9845100058', maxHoursPerDay: 4, specialization: 'Wireless & Smart Systems', division: 'Networks & Security Division', designation: 'Assistant Professor' },
+  { id: 'fac-59', name: 'Dr. Chetan Patil', phone: '9845100059', maxHoursPerDay: 4, specialization: 'Cloud Security & AWS Infrastructure', division: 'Networks & Security Division', designation: 'Professor' },
+  { id: 'fac-60', name: 'Mr. Varun Bhat', phone: '9845100060', maxHoursPerDay: 4, specialization: 'Intrusion Detection & Defense', division: 'Networks & Security Division', designation: 'Assistant Professor' },
+
+  // 61-70: Programming, Software Engineering & Web Technologies Division
+  { id: 'fac-61', name: 'Dr. Jayesh Mehta', phone: '9845100061', maxHoursPerDay: 4, specialization: 'Data Structures & Algorithms', division: 'Programming Division', designation: 'Professor' },
+  { id: 'fac-62', name: 'Ms. Anupama Shenoy', phone: '9845100062', maxHoursPerDay: 4, specialization: 'Enterprise Java & Spring Boot', division: 'Programming Division', designation: 'Associate Professor' },
+  { id: 'fac-63', name: 'Mr. Nikhil Hegde', phone: '9845100063', maxHoursPerDay: 4, specialization: 'MERN Stack & Full Stack Web', division: 'Programming Division', designation: 'Assistant Professor' },
+  { id: 'fac-64', name: 'Dr. Vandana Mathur', phone: '9845100064', maxHoursPerDay: 4, specialization: 'Software Engineering & Clean Architecture', division: 'Programming Division', designation: 'Professor' },
+  { id: 'fac-65', name: 'Mr. Manish Dubey', phone: '9845100065', maxHoursPerDay: 4, specialization: 'Mobile Application & Flutter Development', division: 'Programming Division', designation: 'Assistant Professor' },
+  { id: 'fac-66', name: 'Dr. Aparna Kaushik', phone: '9845100066', maxHoursPerDay: 4, specialization: 'Python Programming & Scientific Computing', division: 'Programming Division', designation: 'Associate Professor' },
+  { id: 'fac-67', name: 'Mr. Tejas Parekh', phone: '9845100067', maxHoursPerDay: 4, specialization: 'Frontend Engineering & React Ecosystem', division: 'Programming Division', designation: 'Assistant Professor' },
+  { id: 'fac-68', name: 'Dr. Umang Singhal', phone: '9845100068', maxHoursPerDay: 4, specialization: 'Software Testing & Automation QA', division: 'Programming Division', designation: 'Professor' },
+  { id: 'fac-69', name: 'Ms. Madhuri Joshi', phone: '9845100069', maxHoursPerDay: 4, specialization: 'C/C++ Systems Programming', division: 'Programming Division', designation: 'Assistant Professor' },
+  { id: 'fac-70', name: 'Dr. Tarun Sengupta', phone: '9845100070', maxHoursPerDay: 4, specialization: 'Competitive Programming & Algorithms', division: 'Programming Division', designation: 'Professor' },
+
+  // 71-78: Systems, Architecture, OS & Embedded Systems Division
+  { id: 'fac-71', name: 'Dr. Omkar Deshpande', phone: '9845100071', maxHoursPerDay: 4, specialization: 'Operating Systems & Linux Kernel', division: 'Systems Division', designation: 'Professor' },
+  { id: 'fac-72', name: 'Mr. Yashwant Soni', phone: '9845100072', maxHoursPerDay: 4, specialization: 'Computer Organization & RISC Architecture', division: 'Systems Division', designation: 'Assistant Professor' },
+  { id: 'fac-73', name: 'Dr. Pallavi Gokhale', phone: '9845100073', maxHoursPerDay: 4, specialization: 'Compiler Design & Automata Theory', division: 'Systems Division', designation: 'Associate Professor' },
+  { id: 'fac-74', name: 'Mr. Sudhir Mahajan', phone: '9845100074', maxHoursPerDay: 4, specialization: 'Unix & System Programming', division: 'Systems Division', designation: 'Assistant Professor' },
+  { id: 'fac-75', name: 'Dr. Balaji Rangarajan', phone: '9845100075', maxHoursPerDay: 4, specialization: 'High Performance & Distributed Systems', division: 'Systems Division', designation: 'Professor' },
+  { id: 'fac-76', name: 'Ms. Revathi Raman', phone: '9845100076', maxHoursPerDay: 4, specialization: 'Digital Logic & Microprocessors', division: 'Systems Division', designation: 'Assistant Professor' },
+  { id: 'fac-77', name: 'Dr. Hariprasad Varma', phone: '9845100077', maxHoursPerDay: 4, specialization: 'Embedded Systems & Real-Time OS', division: 'Systems Division', designation: 'Associate Professor' },
+  { id: 'fac-78', name: 'Mr. Girish Kulkarni', phone: '9845100078', maxHoursPerDay: 4, specialization: 'Database Administration & SQL', division: 'Data Science Division', designation: 'Assistant Professor' },
+
+  // 79-84: Core Mathematical & Foundational Sciences Division
+  { id: 'fac-79', name: 'Dr. Kalyani Sundaram', phone: '9845100079', maxHoursPerDay: 4, specialization: 'Discrete Mathematics & Graph Theory', division: 'Core Sciences Division', designation: 'Professor' },
+  { id: 'fac-80', name: 'Dr. Mohanlal Yadav', phone: '9845100080', maxHoursPerDay: 4, specialization: 'Probability, Statistics & Stochastic Models', division: 'Core Sciences Division', designation: 'Professor' },
+  { id: 'fac-81', name: 'Ms. Swarna Latha', phone: '9845100081', maxHoursPerDay: 4, specialization: 'Engineering Mathematics & Calculus', division: 'Core Sciences Division', designation: 'Assistant Professor' },
+  { id: 'fac-82', name: 'Dr. Eswar Prasad', phone: '9845100082', maxHoursPerDay: 4, specialization: 'Optimization Techniques & Numerical Methods', division: 'Core Sciences Division', designation: 'Associate Professor' },
+  { id: 'fac-83', name: 'Dr. Shobha Rani', phone: '9845100083', maxHoursPerDay: 4, specialization: 'Engineering Physics & Solid State Devices', division: 'Core Sciences Division', designation: 'Professor' },
+  { id: 'fac-84', name: 'Mr. Deven Dave', phone: '9845100084', maxHoursPerDay: 4, specialization: 'Basic Electrical & Electronics Engineering', division: 'Core Sciences Division', designation: 'Assistant Professor' },
+
+  // 85-90: Professional Development, Emerging Tech & Management Division
+  { id: 'fac-85', name: 'Dr. Shrikant Wagh', phone: '9845100085', maxHoursPerDay: 4, specialization: 'Blockchain & Smart Contracts', division: 'Professional Studies Division', designation: 'Associate Professor' },
+  { id: 'fac-86', name: 'Ms. Pooja Hegde', phone: '9845100086', maxHoursPerDay: 4, specialization: 'Human-Computer Interaction & UI/UX', division: 'Professional Studies Division', designation: 'Assistant Professor' },
+  { id: 'fac-87', name: 'Dr. Rajeshwari Naidu', phone: '9845100087', maxHoursPerDay: 4, specialization: 'Software Project Management & Agile', division: 'Professional Studies Division', designation: 'Professor' },
+  { id: 'fac-88', name: 'Mr. Vinayak Bhat', phone: '9845100088', maxHoursPerDay: 4, specialization: 'AR/VR & Game Programming', division: 'Professional Studies Division', designation: 'Assistant Professor' },
+  { id: 'fac-89', name: 'Dr. Subhashree Bose', phone: '9845100089', maxHoursPerDay: 4, specialization: 'Communicative English & Soft Skills', division: 'Professional Studies Division', designation: 'Associate Professor' },
+  { id: 'fac-90', name: 'Dr. Venkatesh Murthy', phone: '9845100090', maxHoursPerDay: 4, specialization: 'Entrepreneurship & Capstone Projects', division: 'Professional Studies Division', designation: 'Professor' }
 ];
 
 export const DEFAULT_ROOMS: Room[] = [
@@ -656,14 +718,295 @@ export const DEFAULT_FACULTY_MAPPINGS: FacultyCourseMapping[] = [
   { id: 'map-dwm-lab-2', facultyId: 'fac-11', courseId: 'crs-dwm-lab' },
   { id: 'map-bda-lab-1', facultyId: 'fac-26', courseId: 'crs-bda-lab' },
   { id: 'map-bda-lab-2', facultyId: 'fac-27', courseId: 'crs-bda-lab' },
-  { id: 'map-ue1-1', facultyId: 'fac-38', courseId: 'crs-ue1' },
-  { id: 'map-ue1-2', facultyId: 'fac-36', courseId: 'crs-ue1' },
-  { id: 'map-ue2-1', facultyId: 'fac-32', courseId: 'crs-ue2' },
-  { id: 'map-ue3-1', facultyId: 'fac-37', courseId: 'crs-ue3' },
   { id: 'map-elec1-1', facultyId: 'fac-38', courseId: 'crs-elective-i' },
   { id: 'map-elec1-2', facultyId: 'fac-36', courseId: 'crs-elective-i' },
   { id: 'map-elec2-1', facultyId: 'fac-32', courseId: 'crs-elective-ii' },
-  { id: 'map-elec3-1', facultyId: 'fac-37', courseId: 'crs-elective-iii' }
+  { id: 'map-elec3-1', facultyId: 'fac-37', courseId: 'crs-elective-iii' },
+
+  // Multi-Faculty Section Distribution Mappings
+  { id: 'map-math1-2', facultyId: 'fac-2', courseId: 'crs-math1' },
+  { id: 'map-pns-2', facultyId: 'fac-2', courseId: 'crs-pns' },
+  { id: 'map-dmgt-2', facultyId: 'fac-2', courseId: 'crs-dmgt' },
+  { id: 'map-ds-methods-2', facultyId: 'fac-2', courseId: 'crs-ds-methods' },
+  { id: 'map-phy-2', facultyId: 'fac-1', courseId: 'crs-phy' },
+  { id: 'map-phy-lab-2', facultyId: 'fac-1', courseId: 'crs-phy-lab' },
+  { id: 'map-ds-2', facultyId: 'fac-7', courseId: 'crs-ds' },
+  { id: 'map-ds-lab-2', facultyId: 'fac-7', courseId: 'crs-ds-lab' },
+  { id: 'map-daa-2', facultyId: 'fac-6', courseId: 'crs-daa' },
+  { id: 'map-java-2', facultyId: 'fac-4', courseId: 'crs-java' },
+  { id: 'map-java-lab-2', facultyId: 'fac-4', courseId: 'crs-java-lab' },
+  { id: 'map-dbms-2', facultyId: 'fac-11', courseId: 'crs-dbms' },
+  { id: 'map-dbms-3', facultyId: 'fac-26', courseId: 'crs-dbms' },
+  { id: 'map-os-2', facultyId: 'fac-13', courseId: 'crs-os' },
+  { id: 'map-coa-2', facultyId: 'fac-15', courseId: 'crs-coa' },
+  { id: 'map-cn-2', facultyId: 'fac-17', courseId: 'crs-cn' },
+  { id: 'map-fswd-2', facultyId: 'fac-23', courseId: 'crs-fswd' },
+  { id: 'map-fswd-lab-2', facultyId: 'fac-23', courseId: 'crs-fswd-lab' },
+  { id: 'map-dwm-2', facultyId: 'fac-10', courseId: 'crs-dwm' },
+  { id: 'map-cloud-2', facultyId: 'fac-21', courseId: 'crs-cloud' },
+  { id: 'map-cloud-lab-2', facultyId: 'fac-21', courseId: 'crs-cloud-lab' },
+  { id: 'map-bda-2', facultyId: 'fac-27', courseId: 'crs-bda' },
+  { id: 'map-bda-3', facultyId: 'fac-10', courseId: 'crs-bda' },
+  { id: 'map-iot-2', facultyId: 'fac-31', courseId: 'crs-iot' },
+  { id: 'map-iot-3', facultyId: 'fac-16', courseId: 'crs-iot' },
+  { id: 'map-proj-2', facultyId: 'fac-35', courseId: 'crs-proj' },
+  { id: 'map-proj-3', facultyId: 'fac-24', courseId: 'crs-proj' },
+  { id: 'map-proj-4', facultyId: 'fac-9', courseId: 'crs-proj' },
+
+  // Mappings for New Faculty fac-41 to fac-90
+  // 41. Dr. Vikramaditya Sen (Advanced ML, DL)
+  { id: 'map-41-1', facultyId: 'fac-41', courseId: 'crs-ml' },
+  { id: 'map-41-2', facultyId: 'fac-41', courseId: 'crs-ai' },
+  { id: 'map-41-3', facultyId: 'fac-41', courseId: 'crs-pe1' },
+  { id: 'map-41-4', facultyId: 'fac-41', courseId: 'crs-bda-lab' },
+
+  // 42. Dr. Anjali Deshmukh (NLP, Text Analytics)
+  { id: 'map-42-1', facultyId: 'fac-42', courseId: 'crs-nlp' },
+  { id: 'map-42-2', facultyId: 'fac-42', courseId: 'crs-text-analytics' },
+  { id: 'map-42-3', facultyId: 'fac-42', courseId: 'crs-pe3' },
+
+  // 43. Mr. Abhinav Saxena (Deep Learning, Python)
+  { id: 'map-43-1', facultyId: 'fac-43', courseId: 'crs-dl' },
+  { id: 'map-43-2', facultyId: 'fac-43', courseId: 'crs-python' },
+  { id: 'map-43-3', facultyId: 'fac-43', courseId: 'crs-python-lab' },
+
+  // 44. Dr. Ritu Chatterjee (Computer Vision, Image Processing)
+  { id: 'map-44-1', facultyId: 'fac-44', courseId: 'crs-cv' },
+  { id: 'map-44-2', facultyId: 'fac-44', courseId: 'crs-image-proc' },
+  { id: 'map-44-3', facultyId: 'fac-44', courseId: 'crs-pattern-rec' },
+
+  // 45. Mr. Sandeep Kulkarni (Big Data Analytics)
+  { id: 'map-45-1', facultyId: 'fac-45', courseId: 'crs-bda' },
+  { id: 'map-45-2', facultyId: 'fac-45', courseId: 'crs-bda-lab' },
+  { id: 'map-45-3', facultyId: 'fac-45', courseId: 'crs-dwm' },
+
+  // 46. Dr. Nandini Sundaram (Data Warehousing & Mining)
+  { id: 'map-46-1', facultyId: 'fac-46', courseId: 'crs-dwm' },
+  { id: 'map-46-2', facultyId: 'fac-46', courseId: 'crs-dwm-lab' },
+  { id: 'map-46-3', facultyId: 'fac-46', courseId: 'crs-dbms' },
+
+  // 47. Mr. Tanmay Mukherjee (Data Analytics with R)
+  { id: 'map-47-1', facultyId: 'fac-47', courseId: 'crs-r-lab' },
+  { id: 'map-47-2', facultyId: 'fac-47', courseId: 'crs-power-bi' },
+  { id: 'map-47-3', facultyId: 'fac-47', courseId: 'crs-tableau' },
+
+  // 48. Dr. Siddharth Bhattacharya (Generative AI)
+  { id: 'map-48-1', facultyId: 'fac-48', courseId: 'crs-genai' },
+  { id: 'map-48-2', facultyId: 'fac-48', courseId: 'crs-ai' },
+  { id: 'map-48-3', facultyId: 'fac-48', courseId: 'crs-pe2' },
+
+  // 49. Ms. Ishita Banerjee (Predictive Modeling & Statistics)
+  { id: 'map-49-1', facultyId: 'fac-49', courseId: 'crs-pns' },
+  { id: 'map-49-2', facultyId: 'fac-49', courseId: 'crs-ds-methods' },
+  { id: 'map-49-3', facultyId: 'fac-49', courseId: 'crs-r-lab' },
+
+  // 50. Dr. Hemant Trivedi (Pattern Recognition, Intelligent Systems)
+  { id: 'map-50-1', facultyId: 'fac-50', courseId: 'crs-intelligent-sys' },
+  { id: 'map-50-2', facultyId: 'fac-50', courseId: 'crs-expert-sys' },
+  { id: 'map-50-3', facultyId: 'fac-50', courseId: 'crs-ai' },
+
+  // 51. Dr. Saurabh Mishra (Cloud Architecture)
+  { id: 'map-51-1', facultyId: 'fac-51', courseId: 'crs-cloud' },
+  { id: 'map-51-2', facultyId: 'fac-51', courseId: 'crs-cloud-lab' },
+  { id: 'map-51-3', facultyId: 'fac-51', courseId: 'crs-aws' },
+
+  // 52. Ms. Shruti Roy (DevOps, Docker, K8s)
+  { id: 'map-52-1', facultyId: 'fac-52', courseId: 'crs-devops' },
+  { id: 'map-52-2', facultyId: 'fac-52', courseId: 'crs-docker' },
+  { id: 'map-52-3', facultyId: 'fac-52', courseId: 'crs-k8s' },
+  { id: 'map-52-4', facultyId: 'fac-52', courseId: 'crs-cicd' },
+
+  // 53. Dr. Gaurav Aggarwal (Cyber Forensics, Security)
+  { id: 'map-53-1', facultyId: 'fac-53', courseId: 'crs-cyber-sec' },
+  { id: 'map-53-2', facultyId: 'fac-53', courseId: 'crs-info-sec' },
+  { id: 'map-53-3', facultyId: 'fac-53', courseId: 'crs-pe4' },
+
+  // 54. Mr. Pranav Nambiar (Ethical Hacking)
+  { id: 'map-54-1', facultyId: 'fac-54', courseId: 'crs-ethical' },
+  { id: 'map-54-2', facultyId: 'fac-54', courseId: 'crs-net-sec' },
+  { id: 'map-54-3', facultyId: 'fac-54', courseId: 'crs-ids' },
+
+  // 55. Dr. Malini Subramanian (Cryptography)
+  { id: 'map-55-1', facultyId: 'fac-55', courseId: 'crs-crypto' },
+  { id: 'map-55-2', facultyId: 'fac-55', courseId: 'crs-net-sec' },
+  { id: 'map-55-3', facultyId: 'fac-55', courseId: 'crs-pe5' },
+
+  // 56. Mr. Rohan Kapoor (SDN, TCP/IP)
+  { id: 'map-56-1', facultyId: 'fac-56', courseId: 'crs-cn' },
+  { id: 'map-56-2', facultyId: 'fac-56', courseId: 'crs-adv-cn' },
+  { id: 'map-56-3', facultyId: 'fac-56', courseId: 'crs-tcpip' },
+
+  // 57. Dr. Alok Nath (IoT Edge)
+  { id: 'map-57-1', facultyId: 'fac-57', courseId: 'crs-iot' },
+  { id: 'map-57-2', facultyId: 'fac-57', courseId: 'crs-iot-lab' },
+  { id: 'map-57-3', facultyId: 'fac-57', courseId: 'crs-sensor-nets' },
+
+  // 58. Ms. Radhika Pillai (Smart Systems)
+  { id: 'map-58-1', facultyId: 'fac-58', courseId: 'crs-smart-sys' },
+  { id: 'map-58-2', facultyId: 'fac-58', courseId: 'crs-iot-lab' },
+  { id: 'map-58-3', facultyId: 'fac-58', courseId: 'crs-iot' },
+
+  // 59. Dr. Chetan Patil (Cloud Security)
+  { id: 'map-59-1', facultyId: 'fac-59', courseId: 'crs-cloud-sec' },
+  { id: 'map-59-2', facultyId: 'fac-59', courseId: 'crs-cloud' },
+  { id: 'map-59-3', facultyId: 'fac-59', courseId: 'crs-oracle-cloud' },
+
+  // 60. Mr. Varun Bhat (Intrusion Detection)
+  { id: 'map-60-1', facultyId: 'fac-60', courseId: 'crs-ids' },
+  { id: 'map-60-2', facultyId: 'fac-60', courseId: 'crs-net-admin' },
+  { id: 'map-60-3', facultyId: 'fac-60', courseId: 'crs-cn' },
+
+  // 61. Dr. Jayesh Mehta (Data Structures, Algorithms)
+  { id: 'map-61-1', facultyId: 'fac-61', courseId: 'crs-ds' },
+  { id: 'map-61-2', facultyId: 'fac-61', courseId: 'crs-ds-lab' },
+  { id: 'map-61-3', facultyId: 'fac-61', courseId: 'crs-adv-ds' },
+  { id: 'map-61-4', facultyId: 'fac-61', courseId: 'crs-daa' },
+
+  // 62. Ms. Anupama Shenoy (Java)
+  { id: 'map-62-1', facultyId: 'fac-62', courseId: 'crs-java' },
+  { id: 'map-62-2', facultyId: 'fac-62', courseId: 'crs-java-lab' },
+  { id: 'map-62-3', facultyId: 'fac-62', courseId: 'crs-adv-java' },
+
+  // 63. Mr. Nikhil Hegde (MERN, Full Stack)
+  { id: 'map-63-1', facultyId: 'fac-63', courseId: 'crs-fswd' },
+  { id: 'map-63-2', facultyId: 'fac-63', courseId: 'crs-fswd-lab' },
+  { id: 'map-63-3', facultyId: 'fac-63', courseId: 'crs-mern' },
+  { id: 'map-63-4', facultyId: 'fac-63', courseId: 'crs-mongodb' },
+
+  // 64. Dr. Vandana Mathur (Software Engineering)
+  { id: 'map-64-1', facultyId: 'fac-64', courseId: 'crs-se' },
+  { id: 'map-64-2', facultyId: 'fac-64', courseId: 'crs-ooad' },
+  { id: 'map-64-3', facultyId: 'fac-64', courseId: 'crs-sre' },
+
+  // 65. Mr. Manish Dubey (Flutter, Mobile Dev)
+  { id: 'map-65-1', facultyId: 'fac-65', courseId: 'crs-mobile-comp' },
+  { id: 'map-65-2', facultyId: 'fac-65', courseId: 'crs-android-lab' },
+  { id: 'map-65-3', facultyId: 'fac-65', courseId: 'crs-flutter' },
+
+  // 66. Dr. Aparna Kaushik (Python)
+  { id: 'map-66-1', facultyId: 'fac-66', courseId: 'crs-python' },
+  { id: 'map-66-2', facultyId: 'fac-66', courseId: 'crs-python-lab' },
+  { id: 'map-66-3', facultyId: 'fac-66', courseId: 'crs-adv-python' },
+
+  // 67. Mr. Tejas Parekh (Frontend, REST APIs)
+  { id: 'map-67-1', facultyId: 'fac-67', courseId: 'crs-frontend' },
+  { id: 'map-67-2', facultyId: 'fac-67', courseId: 'crs-rest-apis' },
+  { id: 'map-67-3', facultyId: 'fac-67', courseId: 'crs-fswd-lab' },
+
+  // 68. Dr. Umang Singhal (Software Testing)
+  { id: 'map-68-1', facultyId: 'fac-68', courseId: 'crs-testing' },
+  { id: 'map-68-2', facultyId: 'fac-68', courseId: 'crs-se' },
+  { id: 'map-68-3', facultyId: 'fac-68', courseId: 'crs-agile' },
+
+  // 69. Ms. Madhuri Joshi (C Programming)
+  { id: 'map-69-1', facultyId: 'fac-69', courseId: 'crs-cprog' },
+  { id: 'map-69-2', facultyId: 'fac-69', courseId: 'crs-c-lab' },
+  { id: 'map-69-3', facultyId: 'fac-69', courseId: 'crs-sys-prog' },
+
+  // 70. Dr. Tarun Sengupta (Competitive Programming)
+  { id: 'map-70-1', facultyId: 'fac-70', courseId: 'crs-comp-prog' },
+  { id: 'map-70-2', facultyId: 'fac-70', courseId: 'crs-daa' },
+  { id: 'map-70-3', facultyId: 'fac-70', courseId: 'crs-ds' },
+
+  // 71. Dr. Omkar Deshpande (Operating Systems, Linux)
+  { id: 'map-71-1', facultyId: 'fac-71', courseId: 'crs-os' },
+  { id: 'map-71-2', facultyId: 'fac-71', courseId: 'crs-linux' },
+  { id: 'map-71-3', facultyId: 'fac-71', courseId: 'crs-unix' },
+
+  // 72. Mr. Yashwant Soni (COA, Digital Design)
+  { id: 'map-72-1', facultyId: 'fac-72', courseId: 'crs-coa' },
+  { id: 'map-72-2', facultyId: 'fac-72', courseId: 'crs-dld' },
+  { id: 'map-72-3', facultyId: 'fac-72', courseId: 'crs-dld-lab' },
+
+  // 73. Dr. Pallavi Gokhale (Compiler Design, TOC)
+  { id: 'map-73-1', facultyId: 'fac-73', courseId: 'crs-compiler' },
+  { id: 'map-73-2', facultyId: 'fac-73', courseId: 'crs-toc' },
+
+  // 74. Mr. Sudhir Mahajan (Linux Administration, Sys Prog)
+  { id: 'map-74-1', facultyId: 'fac-74', courseId: 'crs-linux-admin' },
+  { id: 'map-74-2', facultyId: 'fac-74', courseId: 'crs-sys-prog' },
+  { id: 'map-74-3', facultyId: 'fac-74', courseId: 'crs-unix' },
+
+  // 75. Dr. Balaji Rangarajan (Distributed Systems, Architecture)
+  { id: 'map-75-1', facultyId: 'fac-75', courseId: 'crs-coa' },
+  { id: 'map-75-2', facultyId: 'fac-75', courseId: 'crs-cloud' },
+  { id: 'map-75-3', facultyId: 'fac-75', courseId: 'crs-os' },
+
+  // 76. Ms. Revathi Raman (DLD, Microprocessors)
+  { id: 'map-76-1', facultyId: 'fac-76', courseId: 'crs-dld' },
+  { id: 'map-76-2', facultyId: 'fac-76', courseId: 'crs-dld-lab' },
+  { id: 'map-76-3', facultyId: 'fac-76', courseId: 'crs-uproc' },
+
+  // 77. Dr. Hariprasad Varma (Embedded Systems)
+  { id: 'map-77-1', facultyId: 'fac-77', courseId: 'crs-embedded' },
+  { id: 'map-77-2', facultyId: 'fac-77', courseId: 'crs-embedded-prog' },
+  { id: 'map-77-3', facultyId: 'fac-77', courseId: 'crs-iot' },
+
+  // 78. Mr. Girish Kulkarni (Database Administration)
+  { id: 'map-78-1', facultyId: 'fac-78', courseId: 'crs-dbms' },
+  { id: 'map-78-2', facultyId: 'fac-78', courseId: 'crs-dbms-lab' },
+  { id: 'map-78-3', facultyId: 'fac-78', courseId: 'crs-sql' },
+
+  // 79. Dr. Kalyani Sundaram (Discrete Mathematics)
+  { id: 'map-79-1', facultyId: 'fac-79', courseId: 'crs-dmgt' },
+  { id: 'map-79-2', facultyId: 'fac-79', courseId: 'crs-graph-theory' },
+  { id: 'map-79-3', facultyId: 'fac-79', courseId: 'crs-math1' },
+
+  // 80. Dr. Mohanlal Yadav (Probability & Statistics)
+  { id: 'map-80-1', facultyId: 'fac-80', courseId: 'crs-pns' },
+  { id: 'map-80-2', facultyId: 'fac-80', courseId: 'crs-ds-methods' },
+  { id: 'map-80-3', facultyId: 'fac-80', courseId: 'crs-math-ds' },
+
+  // 81. Ms. Swarna Latha (Engineering Mathematics)
+  { id: 'map-81-1', facultyId: 'fac-81', courseId: 'crs-math1' },
+  { id: 'map-81-2', facultyId: 'fac-81', courseId: 'crs-diff-eq' },
+  { id: 'map-81-3', facultyId: 'fac-81', courseId: 'crs-num-methods' },
+
+  // 82. Dr. Eswar Prasad (Optimization Techniques)
+  { id: 'map-82-1', facultyId: 'fac-82', courseId: 'crs-optimization' },
+  { id: 'map-82-2', facultyId: 'fac-82', courseId: 'crs-num-methods' },
+  { id: 'map-82-3', facultyId: 'fac-82', courseId: 'crs-math1' },
+
+  // 83. Dr. Shobha Rani (Physics)
+  { id: 'map-83-1', facultyId: 'fac-83', courseId: 'crs-phy' },
+  { id: 'map-83-2', facultyId: 'fac-83', courseId: 'crs-phy-lab' },
+
+  // 84. Mr. Deven Dave (BEEE)
+  { id: 'map-84-1', facultyId: 'fac-84', courseId: 'crs-beee' },
+  { id: 'map-84-2', facultyId: 'fac-84', courseId: 'crs-beee-lab' },
+
+  // 85. Dr. Shrikant Wagh (Blockchain)
+  { id: 'map-85-1', facultyId: 'fac-85', courseId: 'crs-blockchain' },
+  { id: 'map-85-2', facultyId: 'fac-85', courseId: 'crs-blockchain-ess' },
+  { id: 'map-85-3', facultyId: 'fac-85', courseId: 'crs-smart-contracts' },
+
+  // 86. Ms. Pooja Hegde (HCI, UI/UX)
+  { id: 'map-86-1', facultyId: 'fac-86', courseId: 'crs-hci' },
+  { id: 'map-86-2', facultyId: 'fac-86', courseId: 'crs-uiux' },
+  { id: 'map-86-3', facultyId: 'fac-86', courseId: 'crs-uxe' },
+
+  // 87. Dr. Rajeshwari Naidu (Software Project Management)
+  { id: 'map-87-1', facultyId: 'fac-87', courseId: 'crs-spm' },
+  { id: 'map-87-2', facultyId: 'fac-87', courseId: 'crs-pm' },
+  { id: 'map-87-3', facultyId: 'fac-87', courseId: 'crs-scrum' },
+
+  // 88. Mr. Vinayak Bhat (AR/VR, Game Programming)
+  { id: 'map-88-1', facultyId: 'fac-88', courseId: 'crs-ar' },
+  { id: 'map-88-2', facultyId: 'fac-88', courseId: 'crs-vr' },
+  { id: 'map-88-3', facultyId: 'fac-88', courseId: 'crs-game-prog' },
+  { id: 'map-88-4', facultyId: 'fac-88', courseId: 'crs-unity' },
+
+  // 89. Dr. Subhashree Bose (Communicative English)
+  { id: 'map-89-1', facultyId: 'fac-89', courseId: 'crs-eng' },
+  { id: 'map-89-2', facultyId: 'fac-89', courseId: 'crs-soft-skills' },
+  { id: 'map-89-3', facultyId: 'fac-89', courseId: 'crs-aptitude' },
+
+  // 90. Dr. Venkatesh Murthy (Projects, Capstone)
+  { id: 'map-90-1', facultyId: 'fac-90', courseId: 'crs-mini-proj' },
+  { id: 'map-90-2', facultyId: 'fac-90', courseId: 'crs-proj' },
+  { id: 'map-90-3', facultyId: 'fac-90', courseId: 'crs-intern1' },
+  { id: 'map-90-4', facultyId: 'fac-90', courseId: 'crs-intern2' },
+  { id: 'map-90-5', facultyId: 'fac-90', courseId: 'crs-esm' }
 ];
 
 export const DEFAULT_SEM_COURSES: Record<number, string[]> = {
@@ -747,10 +1090,57 @@ export const DEFAULT_SEMESTER_COURSE_MAPS: SemesterCourseMap[] = [
 ];
 
 export const DEFAULT_TIMETABLE: TimetableEntry[] = [
-  // Semester VII (CSE-A) Pre-populated
+  // Semester VII (CSE-A) 100% Conflict-Free Weekly Matrix (36/36 Slots)
+  // Monday
   {
-    id: 'tt-mon-1',
+    id: 'tt-cse-a-mon-1',
     day: 'Monday',
+    slotId: 'I',
+    batchId: 'batch-cse-a',
+    courseId: 'crs-act-train',
+    facultyId: 'fac-51',
+    roomId: 'room-027',
+    isLocked: false,
+    colSpan: 2
+  },
+  {
+    id: 'tt-cse-a-mon-3',
+    day: 'Monday',
+    slotId: 'III',
+    batchId: 'batch-cse-a',
+    courseId: 'crs-mooc3',
+    facultyId: 'fac-29',
+    roomId: 'room-027',
+    isLocked: false,
+    colSpan: 1
+  },
+  {
+    id: 'tt-cse-a-mon-4',
+    day: 'Monday',
+    slotId: 'IV',
+    batchId: 'batch-cse-a',
+    courseId: 'crs-act-extra',
+    facultyId: 'fac-35',
+    roomId: 'room-027',
+    isLocked: false,
+    colSpan: 1
+  },
+  {
+    id: 'tt-cse-a-mon-5',
+    day: 'Monday',
+    slotId: 'V',
+    batchId: 'batch-cse-a',
+    courseId: 'crs-bda-lab',
+    facultyId: 'fac-26',
+    roomId: 'room-bd-lab-1',
+    isLocked: false,
+    colSpan: 2
+  },
+
+  // Tuesday
+  {
+    id: 'tt-cse-a-tue-1',
+    day: 'Tuesday',
     slotId: 'I',
     batchId: 'batch-cse-a',
     courseId: 'crs-bda',
@@ -760,8 +1150,8 @@ export const DEFAULT_TIMETABLE: TimetableEntry[] = [
     colSpan: 1
   },
   {
-    id: 'tt-mon-2',
-    day: 'Monday',
+    id: 'tt-cse-a-tue-2',
+    day: 'Tuesday',
     slotId: 'II',
     batchId: 'batch-cse-a',
     courseId: 'crs-iot',
@@ -771,18 +1161,42 @@ export const DEFAULT_TIMETABLE: TimetableEntry[] = [
     colSpan: 1
   },
   {
-    id: 'tt-tue-3',
+    id: 'tt-cse-a-tue-3',
     day: 'Tuesday',
     slotId: 'III',
+    batchId: 'batch-cse-a',
+    courseId: 'crs-act-ment',
+    facultyId: 'fac-40',
+    roomId: 'room-027',
+    isLocked: false,
+    colSpan: 1
+  },
+  {
+    id: 'tt-cse-a-tue-4',
+    day: 'Tuesday',
+    slotId: 'IV',
+    batchId: 'batch-cse-a',
+    courseId: 'crs-act-lib',
+    facultyId: 'fac-38',
+    roomId: 'room-027',
+    isLocked: false,
+    colSpan: 1
+  },
+  {
+    id: 'tt-cse-a-tue-5',
+    day: 'Tuesday',
+    slotId: 'V',
     batchId: 'batch-cse-a',
     courseId: 'crs-iot-lab',
     facultyId: 'fac-30',
     roomId: 'room-iot-lab-1',
-    isLocked: true,
+    isLocked: false,
     colSpan: 2
   },
+
+  // Wednesday
   {
-    id: 'tt-wed-1',
+    id: 'tt-cse-a-wed-1',
     day: 'Wednesday',
     slotId: 'I',
     batchId: 'batch-cse-a',
@@ -793,25 +1207,218 @@ export const DEFAULT_TIMETABLE: TimetableEntry[] = [
     colSpan: 1
   },
   {
-    id: 'tt-thu-1',
-    day: 'Thursday',
-    slotId: 'I',
+    id: 'tt-cse-a-wed-2',
+    day: 'Wednesday',
+    slotId: 'II',
+    batchId: 'batch-cse-a',
+    courseId: 'crs-pe5',
+    facultyId: 'fac-25',
+    roomId: 'room-027',
+    isLocked: false,
+    colSpan: 1
+  },
+  {
+    id: 'tt-cse-a-wed-3',
+    day: 'Wednesday',
+    slotId: 'III',
+    batchId: 'batch-cse-a',
+    courseId: 'crs-bda',
+    facultyId: 'fac-26',
+    roomId: 'room-027',
+    isLocked: false,
+    colSpan: 1
+  },
+  {
+    id: 'tt-cse-a-wed-4',
+    day: 'Wednesday',
+    slotId: 'IV',
+    batchId: 'batch-cse-a',
+    courseId: 'crs-iot',
+    facultyId: 'fac-30',
+    roomId: 'room-027',
+    isLocked: false,
+    colSpan: 1
+  },
+  {
+    id: 'tt-cse-a-wed-5',
+    day: 'Wednesday',
+    slotId: 'V',
     batchId: 'batch-cse-a',
     courseId: 'crs-mini-proj',
     facultyId: 'fac-40',
     roomId: 'room-027',
-    isLocked: true,
-    colSpan: 4
+    isLocked: false,
+    colSpan: 2
+  },
+
+  // Thursday
+  {
+    id: 'tt-cse-a-thu-1',
+    day: 'Thursday',
+    slotId: 'I',
+    batchId: 'batch-cse-a',
+    courseId: 'crs-pe4',
+    facultyId: 'fac-24',
+    roomId: 'room-027',
+    isLocked: false,
+    colSpan: 1
   },
   {
-    id: 'tt-fri-1',
+    id: 'tt-cse-a-thu-2',
+    day: 'Thursday',
+    slotId: 'II',
+    batchId: 'batch-cse-a',
+    courseId: 'crs-pe5',
+    facultyId: 'fac-25',
+    roomId: 'room-027',
+    isLocked: false,
+    colSpan: 1
+  },
+  {
+    id: 'tt-cse-a-thu-3',
+    day: 'Thursday',
+    slotId: 'III',
+    batchId: 'batch-cse-a',
+    courseId: 'crs-bda',
+    facultyId: 'fac-26',
+    roomId: 'room-027',
+    isLocked: false,
+    colSpan: 1
+  },
+  {
+    id: 'tt-cse-a-thu-4',
+    day: 'Thursday',
+    slotId: 'IV',
+    batchId: 'batch-cse-a',
+    courseId: 'crs-iot',
+    facultyId: 'fac-30',
+    roomId: 'room-027',
+    isLocked: false,
+    colSpan: 1
+  },
+  {
+    id: 'tt-cse-a-thu-5',
+    day: 'Thursday',
+    slotId: 'V',
+    batchId: 'batch-cse-a',
+    courseId: 'crs-act-phys',
+    facultyId: 'fac-36',
+    roomId: 'room-027',
+    isLocked: false,
+    colSpan: 2
+  },
+
+  // Friday
+  {
+    id: 'tt-cse-a-fri-1',
     day: 'Friday',
     slotId: 'I',
     batchId: 'batch-cse-a',
-    courseId: 'crs-bda-lab',
-    facultyId: 'fac-26',
-    roomId: 'room-bd-lab-1',
-    isLocked: true,
+    courseId: 'crs-pe4',
+    facultyId: 'fac-24',
+    roomId: 'room-027',
+    isLocked: false,
+    colSpan: 1
+  },
+  {
+    id: 'tt-cse-a-fri-2',
+    day: 'Friday',
+    slotId: 'II',
+    batchId: 'batch-cse-a',
+    courseId: 'crs-mooc3',
+    facultyId: 'fac-29',
+    roomId: 'room-027',
+    isLocked: false,
+    colSpan: 1
+  },
+  {
+    id: 'tt-cse-a-fri-3',
+    day: 'Friday',
+    slotId: 'III',
+    batchId: 'batch-cse-a',
+    courseId: 'crs-act-extra',
+    facultyId: 'fac-37',
+    roomId: 'room-027',
+    isLocked: false,
+    colSpan: 1
+  },
+  {
+    id: 'tt-cse-a-fri-4',
+    day: 'Friday',
+    slotId: 'IV',
+    batchId: 'batch-cse-a',
+    courseId: 'crs-act-vac',
+    facultyId: 'fac-41',
+    roomId: 'room-027',
+    isLocked: false,
+    colSpan: 1
+  },
+  {
+    id: 'tt-cse-a-fri-5',
+    day: 'Friday',
+    slotId: 'V',
+    batchId: 'batch-cse-a',
+    courseId: 'crs-act-train',
+    facultyId: 'fac-52',
+    roomId: 'room-027',
+    isLocked: false,
+    colSpan: 2
+  },
+
+  // Saturday
+  {
+    id: 'tt-cse-a-sat-1',
+    day: 'Saturday',
+    slotId: 'I',
+    batchId: 'batch-cse-a',
+    courseId: 'crs-pe5',
+    facultyId: 'fac-25',
+    roomId: 'room-027',
+    isLocked: false,
+    colSpan: 1
+  },
+  {
+    id: 'tt-cse-a-sat-2',
+    day: 'Saturday',
+    slotId: 'II',
+    batchId: 'batch-cse-a',
+    courseId: 'crs-mooc3',
+    facultyId: 'fac-29',
+    roomId: 'room-027',
+    isLocked: false,
+    colSpan: 1
+  },
+  {
+    id: 'tt-cse-a-sat-3',
+    day: 'Saturday',
+    slotId: 'III',
+    batchId: 'batch-cse-a',
+    courseId: 'crs-act-sem',
+    facultyId: 'fac-42',
+    roomId: 'room-027',
+    isLocked: false,
+    colSpan: 1
+  },
+  {
+    id: 'tt-cse-a-sat-4',
+    day: 'Saturday',
+    slotId: 'IV',
+    batchId: 'batch-cse-a',
+    courseId: 'crs-act-writ',
+    facultyId: 'fac-43',
+    roomId: 'room-027',
+    isLocked: false,
+    colSpan: 1
+  },
+  {
+    id: 'tt-cse-a-sat-5',
+    day: 'Saturday',
+    slotId: 'V',
+    batchId: 'batch-cse-a',
+    courseId: 'crs-act-train',
+    facultyId: 'fac-53',
+    roomId: 'room-027',
+    isLocked: false,
     colSpan: 2
   }
 ];

@@ -59,11 +59,6 @@ export default function FacultyTimetableView({
   const [departmentFilter, setDepartmentFilter] = useState<string>('all');
   const [isExporting, setIsExporting] = useState<boolean>(false);
 
-  // Selected faculty object
-  const activeTeacher = useMemo(() => {
-    return faculty.find(f => f.id === selectedFacultyId) || faculty[0];
-  }, [faculty, selectedFacultyId]);
-
   // Distinct divisions / departments for filter
   const departments = useMemo(() => {
     const set = new Set<string>();
@@ -76,13 +71,21 @@ export default function FacultyTimetableView({
   // Filtered faculty list
   const filteredFaculty = useMemo(() => {
     return faculty.filter(f => {
-      const matchSearch = f.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      const matchSearch = !searchQuery.trim() ||
+                          f.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           f.phone.includes(searchQuery) ||
                           (f.specialization && f.specialization.toLowerCase().includes(searchQuery.toLowerCase()));
       const matchDept = departmentFilter === 'all' || f.division === departmentFilter;
       return matchSearch && matchDept;
     });
   }, [faculty, searchQuery, departmentFilter]);
+
+  // Selected faculty object - reactive to department and search filters
+  const activeTeacher = useMemo(() => {
+    const foundInFiltered = filteredFaculty.find(f => f.id === selectedFacultyId);
+    if (foundInFiltered) return foundInFiltered;
+    return filteredFaculty[0] || faculty[0];
+  }, [filteredFaculty, selectedFacultyId, faculty]);
 
   // Entries for the selected faculty member
   const teacherEntries = useMemo(() => {
@@ -310,16 +313,16 @@ export default function FacultyTimetableView({
   return (
     <div className="space-y-6">
       {/* 1. Top Control Bar: Search, Department Filter & Faculty Selector */}
-      <section className="bg-white/95 backdrop-blur-md border border-slate-200/90 p-5 rounded-3xl shadow-sm space-y-4 print:hidden">
+      <section className="bg-white border border-slate-200/90 p-5 rounded-3xl shadow-sm space-y-4 print:hidden text-slate-900">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2">
-              <span className="h-2 w-2 rounded-full bg-indigo-600 animate-pulse" />
-              <h2 className="text-base font-black text-slate-900 tracking-tight flex items-center gap-2">
-                <User className="w-5 h-5 text-indigo-600" />
+              <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+              <h2 className="text-base font-black text-[#0F172A] tracking-tight flex items-center gap-2">
+                <User className="w-5 h-5 text-emerald-600" />
                 Faculty Timetable Hub
               </h2>
-              <span className="text-[10px] bg-indigo-50 border border-indigo-200/60 text-indigo-700 font-extrabold px-2.5 py-0.5 rounded-full font-mono">
+              <span className="text-[10px] bg-emerald-50 border border-emerald-200 text-emerald-700 font-extrabold px-2.5 py-0.5 rounded-full font-mono">
                 {faculty.length} Faculty Members
               </span>
             </div>
@@ -332,7 +335,7 @@ export default function FacultyTimetableView({
           <div className="flex items-center flex-wrap gap-2">
             <button
               onClick={handlePrintTeacher}
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200/80 border border-slate-200 transition-all cursor-pointer shadow-2xs"
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-slate-700 bg-white hover:bg-slate-50 border border-slate-200 transition-all cursor-pointer shadow-2xs"
             >
               <Printer className="w-4 h-4 text-slate-600" />
               <span>Print Schedule</span>
@@ -341,18 +344,18 @@ export default function FacultyTimetableView({
             <button
               onClick={handleDownloadTeacherPNG}
               disabled={isExporting}
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100/80 border border-indigo-200/70 transition-all cursor-pointer shadow-2xs disabled:opacity-50"
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-slate-700 bg-white hover:bg-slate-50 border border-slate-200 transition-all cursor-pointer shadow-2xs disabled:opacity-50"
             >
-              <Download className="w-4 h-4 text-indigo-600" />
+              <Download className="w-4 h-4 text-slate-600" />
               <span>PNG Snapshot</span>
             </button>
 
             <button
               onClick={handleDownloadTeacherPDF}
               disabled={isExporting}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-extrabold text-white bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 shadow-md shadow-indigo-500/20 transition-all cursor-pointer disabled:opacity-50"
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-extrabold text-white bg-emerald-600 hover:bg-emerald-700 shadow-md shadow-emerald-600/20 transition-all cursor-pointer disabled:opacity-50"
             >
-              <FileText className="w-4 h-4" />
+              <FileText className="w-4 h-4 text-white" />
               <span>Export Teacher PDF</span>
             </button>
           </div>
@@ -367,15 +370,29 @@ export default function FacultyTimetableView({
               placeholder="Search faculty by name, phone, or specialization..."
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-4 py-2 text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-4 py-2 text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
             />
           </div>
 
           <div className="flex items-center gap-2">
             <select
               value={departmentFilter}
-              onChange={e => setDepartmentFilter(e.target.value)}
-              className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 cursor-pointer"
+              onChange={e => {
+                const newDept = e.target.value;
+                setDepartmentFilter(newDept);
+                const nextFiltered = faculty.filter(f => {
+                  const matchSearch = !searchQuery.trim() ||
+                                      f.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                                      f.phone.includes(searchQuery) ||
+                                      (f.specialization && f.specialization.toLowerCase().includes(searchQuery.toLowerCase()));
+                  const matchDept = newDept === 'all' || f.division === newDept;
+                  return matchSearch && matchDept;
+                });
+                if (nextFiltered.length > 0) {
+                  setSelectedFacultyId(nextFiltered[0].id);
+                }
+              }}
+              className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 cursor-pointer"
             >
               <option value="all">All Departments / Divisions</option>
               {departments.map(dept => (
@@ -386,10 +403,10 @@ export default function FacultyTimetableView({
             <select
               value={selectedFacultyId}
               onChange={e => setSelectedFacultyId(e.target.value)}
-              className="bg-indigo-50/60 border border-indigo-200/80 rounded-xl px-3 py-2 text-xs font-extrabold text-indigo-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 cursor-pointer max-w-[240px] truncate"
+              className="bg-emerald-50 border border-emerald-300 rounded-xl px-3 py-2 text-xs font-extrabold text-emerald-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 cursor-pointer max-w-[240px] truncate"
             >
               {filteredFaculty.map(f => (
-                <option key={f.id} value={f.id}>
+                <option key={f.id} value={f.id} className="text-slate-800">
                   {f.name} ({f.designation || 'Faculty'})
                 </option>
               ))}
@@ -407,12 +424,12 @@ export default function FacultyTimetableView({
                 onClick={() => setSelectedFacultyId(f.id)}
                 className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer shrink-0 border ${
                   isSelected
-                    ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs'
-                    : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200/80'
+                    ? 'bg-emerald-600 text-white font-black border-emerald-500 shadow-xs'
+                    : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200'
                 }`}
               >
                 <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black ${
-                  isSelected ? 'bg-white text-indigo-700' : 'bg-indigo-100 text-indigo-800'
+                  isSelected ? 'bg-white text-emerald-700' : 'bg-slate-200 text-slate-600'
                 }`}>
                   {f.name.charAt(f.name.startsWith('Dr.') ? 4 : (f.name.startsWith('Mr.') || f.name.startsWith('Ms.') ? 4 : 0))}
                 </div>
@@ -425,33 +442,33 @@ export default function FacultyTimetableView({
 
       {/* 2. Faculty Profile & Workload Header Banner */}
       {activeTeacher && (
-        <section className="bg-white/95 backdrop-blur-md border border-slate-200/90 p-5 sm:p-6 rounded-3xl shadow-sm print:hidden">
+        <section className="bg-white border border-slate-200/90 p-5 sm:p-6 rounded-3xl shadow-sm print:hidden text-slate-900">
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
             {/* Teacher Details */}
             <div className="flex items-start sm:items-center gap-4">
-              <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-purple-600 flex items-center justify-center text-white text-xl font-black shadow-lg shadow-indigo-500/20 shrink-0">
+              <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-600 flex items-center justify-center text-white text-xl font-black shadow-md shadow-emerald-500/20 shrink-0">
                 {activeTeacher.name.charAt(activeTeacher.name.startsWith('Dr.') ? 4 : (activeTeacher.name.startsWith('Mr.') ? 4 : 0))}
               </div>
               <div className="space-y-1">
                 <div className="flex items-center flex-wrap gap-2">
-                  <h3 className="text-lg font-black text-slate-900 tracking-tight">
+                  <h3 className="text-lg font-black text-[#0F172A] tracking-tight">
                     {activeTeacher.name}
                   </h3>
-                  <span className="bg-indigo-50 text-indigo-700 border border-indigo-200/70 text-[10px] font-extrabold px-2.5 py-0.5 rounded-full font-mono">
+                  <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-extrabold px-2.5 py-0.5 rounded-full font-mono">
                     {activeTeacher.designation || 'Professor'}
                   </span>
-                  <span className="bg-emerald-50 text-emerald-700 border border-emerald-200/70 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
+                  <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
                     <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Active Faculty
                   </span>
                 </div>
                 <p className="text-xs text-slate-500 font-medium flex items-center flex-wrap gap-3">
-                  <span className="flex items-center gap-1"><Building className="w-3.5 h-3.5 text-slate-400" /> {activeTeacher.division || 'School of Technology'}</span>
+                  <span className="flex items-center gap-1"><Building className="w-3.5 h-3.5 text-slate-400" /> {activeTeacher.division || 'Academic Operations'}</span>
                   <span>•</span>
                   <span className="flex items-center gap-1 font-mono"><Phone className="w-3.5 h-3.5 text-slate-400" /> {activeTeacher.phone}</span>
                   {activeTeacher.specialization && (
                     <>
                       <span>•</span>
-                      <span className="text-indigo-600 font-semibold">Specialty: {activeTeacher.specialization}</span>
+                      <span className="text-emerald-700 font-semibold">Specialty: {activeTeacher.specialization}</span>
                     </>
                   )}
                 </p>
@@ -460,25 +477,25 @@ export default function FacultyTimetableView({
 
             {/* Quick Metrics Cards */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 w-full md:w-auto">
-              <div className="bg-slate-50 border border-slate-200/70 p-3 rounded-2xl text-center min-w-[90px]">
-                <span className="text-[10px] text-slate-400 uppercase font-mono font-bold block">Total Load</span>
-                <span className="text-base font-black text-indigo-700 font-mono">{stats.totalHours} hrs</span>
-                <span className="text-[9px] text-slate-500 block">/ 18 hrs max</span>
+              <div className="bg-slate-50 border border-slate-200 p-3 rounded-2xl text-center min-w-[90px]">
+                <span className="text-[10px] text-slate-500 uppercase font-mono font-bold block">Total Load</span>
+                <span className="text-base font-black text-emerald-700 font-mono">{stats.totalHours} hrs</span>
+                <span className="text-[9px] text-slate-400 block">/ 18 hrs max</span>
               </div>
-              <div className="bg-slate-50 border border-slate-200/70 p-3 rounded-2xl text-center min-w-[90px]">
-                <span className="text-[10px] text-slate-400 uppercase font-mono font-bold block">Theory</span>
-                <span className="text-base font-black text-blue-700 font-mono">{stats.theoryHours} hrs</span>
-                <span className="text-[9px] text-slate-500 block">Lectures</span>
+              <div className="bg-slate-50 border border-slate-200 p-3 rounded-2xl text-center min-w-[90px]">
+                <span className="text-[10px] text-slate-500 uppercase font-mono font-bold block">Theory</span>
+                <span className="text-base font-black text-blue-600 font-mono">{stats.theoryHours} hrs</span>
+                <span className="text-[9px] text-slate-400 block">Lectures</span>
               </div>
-              <div className="bg-slate-50 border border-slate-200/70 p-3 rounded-2xl text-center min-w-[90px]">
-                <span className="text-[10px] text-slate-400 uppercase font-mono font-bold block">Labs / Pract</span>
-                <span className="text-base font-black text-purple-700 font-mono">{stats.labHours} hrs</span>
-                <span className="text-[9px] text-slate-500 block">Hands-on</span>
+              <div className="bg-slate-50 border border-slate-200 p-3 rounded-2xl text-center min-w-[90px]">
+                <span className="text-[10px] text-slate-500 uppercase font-mono font-bold block">Labs / Pract</span>
+                <span className="text-base font-black text-purple-600 font-mono">{stats.labHours} hrs</span>
+                <span className="text-[9px] text-slate-400 block">Hands-on</span>
               </div>
-              <div className="bg-slate-50 border border-slate-200/70 p-3 rounded-2xl text-center min-w-[90px]">
-                <span className="text-[10px] text-slate-400 uppercase font-mono font-bold block">Sections</span>
+              <div className="bg-slate-50 border border-slate-200 p-3 rounded-2xl text-center min-w-[90px]">
+                <span className="text-[10px] text-slate-500 uppercase font-mono font-bold block">Sections</span>
                 <span className="text-base font-black text-emerald-700 font-mono">{stats.uniqueBatches.length}</span>
-                <span className="text-[9px] text-slate-500 block">Batches</span>
+                <span className="text-[9px] text-slate-400 block">Batches</span>
               </div>
             </div>
           </div>
@@ -769,9 +786,9 @@ export default function FacultyTimetableView({
           <div className="space-y-12">
             <div className="h-10"></div>
             <div className="border-t border-slate-300 pt-1.5 font-bold text-slate-800">
-              Head of Department (HOD)
+              Timetable Committee Convener
             </div>
-            <div className="text-[10px] text-slate-400">Department of Computer Science</div>
+            <div className="text-[10px] text-slate-400">Academic Operations</div>
           </div>
 
           <div className="space-y-12">
@@ -779,7 +796,7 @@ export default function FacultyTimetableView({
             <div className="border-t border-slate-300 pt-1.5 font-bold text-slate-800">
               Dean of Academic Affairs
             </div>
-            <div className="text-[10px] text-slate-400">School of Technology</div>
+            <div className="text-[10px] text-slate-400">TimePro Timetable System</div>
           </div>
         </div>
       </div>

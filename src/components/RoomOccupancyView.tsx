@@ -488,7 +488,7 @@ export default function RoomOccupancyView({
                 {activeRoom?.roomNumber} — WEEKLY OCCUPANCY SCHEDULE
               </h1>
               <p className="text-xs text-slate-500 font-medium">
-                Type: {activeRoom?.type} Facility • Capacity: {activeRoom?.capacity} Students • School of Technology
+                Type: {activeRoom?.type} Facility • Capacity: {activeRoom?.capacity} Students • TimePro Workspace
               </p>
             </div>
 
@@ -749,7 +749,7 @@ export default function RoomOccupancyView({
             <div className="border-t border-slate-300 pt-1.5 font-bold text-slate-800">
               Facility / Lab In-Charge
             </div>
-            <div className="text-[10px] text-slate-400">School of Technology</div>
+            <div className="text-[10px] text-slate-400">Academic Operations</div>
           </div>
 
           <div className="space-y-12">

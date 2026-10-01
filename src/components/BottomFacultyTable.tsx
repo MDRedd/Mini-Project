@@ -60,9 +60,9 @@ export default function BottomFacultyTable({
         </span>
       </div>
 
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto overflow-y-auto max-h-[300px] custom-scrollbar">
         <table className="w-full text-left text-xs border-collapse">
-          <thead>
+          <thead className="sticky top-0 bg-slate-50/95 backdrop-blur-xs z-10 shadow-2xs">
             <tr className="bg-slate-50/80 border-b border-slate-200/80 text-slate-500 font-extrabold uppercase tracking-wider">
               <th className="px-6 py-3.5 w-16">SL No.</th>
               <th className="px-6 py-3.5 w-36">Subject Code</th>

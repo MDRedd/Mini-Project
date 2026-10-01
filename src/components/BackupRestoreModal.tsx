@@ -88,30 +88,30 @@ export default function BackupRestoreModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 bg-slate-950/40 backdrop-blur-sm flex items-center justify-center p-4">
       <motion.div
         initial={{ scale: 0.95, opacity: 0, y: 20 }}
         animate={{ scale: 1, opacity: 1, y: 0 }}
         exit={{ scale: 0.95, opacity: 0, y: 20 }}
         transition={{ type: 'spring', damping: 25, stiffness: 350 }}
-        className="bg-white w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden border border-slate-100 flex flex-col max-h-[90vh]"
+        className="bg-white text-slate-900 w-full max-w-2xl rounded-3xl shadow-xl overflow-hidden border border-slate-200 flex flex-col max-h-[90vh]"
       >
         {/* Modal Header */}
-        <div className="bg-slate-950 text-white p-5 px-6 flex items-center justify-between shrink-0 border-b border-slate-800">
+        <div className="bg-slate-50/80 text-slate-900 p-5 px-6 flex items-center justify-between shrink-0 border-b border-slate-200">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-indigo-600/30 text-indigo-400 rounded-2xl border border-indigo-500/30">
+            <div className="p-2.5 bg-indigo-50 text-indigo-600 rounded-2xl border border-indigo-200/60 shadow-2xs">
               <Shield className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="font-black text-base text-white">Restore from Backup / Timetable Snapshots</h3>
-              <p className="text-xs text-slate-400 mt-0.5">
+              <h3 className="font-black text-base text-[#0F172A]">Restore from Backup / Timetable Snapshots</h3>
+              <p className="text-xs text-slate-500 mt-0.5">
                 Revert to a known good state anytime solver sessions produce an undesirable schedule.
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="text-slate-400 hover:text-white p-2 rounded-xl hover:bg-slate-800 transition-all cursor-pointer"
+            className="text-slate-400 hover:text-slate-700 p-2 rounded-xl hover:bg-slate-100 transition-all cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -120,14 +120,14 @@ export default function BackupRestoreModal({
         {/* Modal Content */}
         <div className="p-6 overflow-y-auto space-y-6 flex-1 custom-scrollbar">
           {/* Create New Snapshot Form */}
-          <form onSubmit={handleCreateSnapshot} className="bg-slate-50/80 border border-slate-200/90 p-4 sm:p-5 rounded-2xl space-y-3">
+          <form onSubmit={handleCreateSnapshot} className="bg-slate-50 border border-slate-200 p-4 sm:p-5 rounded-2xl space-y-3">
             <div className="flex items-center justify-between">
               <label className="text-xs font-black text-slate-800 flex items-center gap-2">
                 <Save className="w-4 h-4 text-indigo-600" />
                 Create New Timetable Snapshot
               </label>
               <span className="text-[10px] text-slate-500 font-mono">
-                Current active entries: <strong className="text-slate-900 font-black">{currentEntries.length}</strong>
+                Current active entries: <strong className="text-indigo-600 font-black">{currentEntries.length}</strong>
               </span>
             </div>
             <div className="flex flex-col sm:flex-row gap-2">
@@ -136,11 +136,11 @@ export default function BackupRestoreModal({
                 placeholder="Snapshot label (e.g. Pre-Solver Backup, Friday State...)"
                 value={newLabel}
                 onChange={(e) => setNewLabel(e.target.value)}
-                className="flex-1 bg-white border border-slate-200 text-xs font-semibold text-slate-900 rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="flex-1 bg-white border border-slate-200 text-xs font-semibold text-slate-900 placeholder-slate-400 rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
               />
               <button
                 type="submit"
-                className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-black px-4 py-2.5 rounded-xl transition-all shadow-md shadow-indigo-500/20 flex items-center justify-center gap-1.5 cursor-pointer shrink-0"
+                className="bg-[#4F46E5] hover:bg-[#4338CA] text-white font-black text-xs px-4 py-2.5 rounded-xl transition-all shadow-md shadow-indigo-500/20 flex items-center justify-center gap-1.5 cursor-pointer shrink-0"
               >
                 <Save className="w-3.5 h-3.5" />
                 Save Snapshot
@@ -151,20 +151,20 @@ export default function BackupRestoreModal({
           {/* Stored Snapshots List */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <h4 className="text-xs font-black text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
-                <Clock className="w-4 h-4 text-indigo-600" />
+              <h4 className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                <Clock className="w-4 h-4 text-slate-600" />
                 Available Backups ({snapshots.length})
               </h4>
               <div className="flex items-center gap-2">
                 <button
                   onClick={handleExportSnapshots}
                   disabled={snapshots.length === 0}
-                  className="text-[11px] font-bold text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 px-3 py-1 rounded-xl transition-all flex items-center gap-1 disabled:opacity-50 cursor-pointer"
+                  className="text-[11px] font-bold text-slate-700 hover:text-slate-900 bg-white hover:bg-slate-50 border border-slate-200 px-3 py-1 rounded-xl transition-all flex items-center gap-1 disabled:opacity-50 cursor-pointer shadow-2xs"
                 >
                   <Download className="w-3 h-3" />
                   Export
                 </button>
-                <label className="text-[11px] font-bold text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 px-3 py-1 rounded-xl transition-all flex items-center gap-1 cursor-pointer">
+                <label className="text-[11px] font-bold text-slate-700 hover:text-slate-900 bg-white hover:bg-slate-50 border border-slate-200 px-3 py-1 rounded-xl transition-all flex items-center gap-1 cursor-pointer shadow-2xs">
                   <Upload className="w-3 h-3" />
                   Import
                   <input type="file" accept=".json" onChange={handleImportSnapshots} className="hidden" />
@@ -172,7 +172,7 @@ export default function BackupRestoreModal({
                 {snapshots.length > 0 && (
                   <button
                     onClick={handleClearAll}
-                    className="text-[11px] font-bold text-rose-600 hover:text-rose-800 bg-rose-50 hover:bg-rose-100 px-3 py-1 rounded-xl transition-all cursor-pointer"
+                    className="text-[11px] font-bold text-rose-700 hover:text-rose-800 bg-rose-50 hover:bg-rose-100 border border-rose-200 px-3 py-1 rounded-xl transition-all cursor-pointer"
                   >
                     Clear All
                   </button>
@@ -193,16 +193,16 @@ export default function BackupRestoreModal({
                 {snapshots.map((snap) => (
                   <div
                     key={snap.id}
-                    className="p-4 bg-white border border-slate-200/80 hover:border-slate-300 rounded-2xl transition-all flex items-center justify-between gap-4 shadow-2xs hover:shadow-xs"
+                    className="p-4 bg-slate-50 border border-slate-200 hover:border-slate-300 rounded-2xl transition-all flex items-center justify-between gap-4 shadow-2xs"
                   >
                     <div className="flex items-start gap-3 min-w-0">
-                      <div className={`p-2 rounded-xl shrink-0 mt-0.5 ${snap.isAuto ? 'bg-amber-50 text-amber-600 border border-amber-200/60' : 'bg-indigo-50 text-indigo-600 border border-indigo-200/60'}`}>
+                      <div className={`p-2 rounded-xl shrink-0 mt-0.5 ${snap.isAuto ? 'bg-amber-50 text-amber-700 border border-amber-200' : 'bg-blue-50 text-blue-700 border border-blue-200'}`}>
                         <RotateCcw className="w-4 h-4" />
                       </div>
                       <div className="min-w-0">
                         <div className="flex items-center gap-2">
-                          <h5 className="text-xs font-extrabold text-slate-900 truncate">{snap.label}</h5>
-                          <span className={`text-[9px] font-mono font-black px-2 py-0.5 rounded-full ${snap.isAuto ? 'bg-amber-100 text-amber-800' : 'bg-indigo-100 text-indigo-800'}`}>
+                          <h5 className="text-xs font-black text-slate-900 truncate">{snap.label}</h5>
+                          <span className={`text-[9px] font-mono font-black px-2 py-0.5 rounded-full ${snap.isAuto ? 'bg-amber-100 text-amber-800' : 'bg-blue-100 text-blue-800'}`}>
                             {snap.isAuto ? 'AUTO' : 'MANUAL'}
                           </span>
                         </div>
@@ -261,11 +261,11 @@ export default function BackupRestoreModal({
         </div>
 
         {/* Modal Footer */}
-        <div className="bg-slate-50 border-t border-slate-100 p-4 px-6 flex items-center justify-between text-xs text-slate-500 shrink-0">
-          <span className="text-[11px] font-medium text-slate-400">Backups stored locally in browser storage</span>
+        <div className="bg-slate-50/80 border-t border-slate-200 p-4 px-6 flex items-center justify-between text-xs text-slate-500 shrink-0">
+          <span className="text-[11px] font-medium text-slate-500">Backups stored locally in browser storage</span>
           <button
             onClick={onClose}
-            className="bg-slate-900 hover:bg-slate-800 text-white font-extrabold text-xs px-4 py-2 rounded-xl transition-all cursor-pointer"
+            className="bg-white hover:bg-slate-50 text-slate-700 font-extrabold text-xs px-4 py-2 rounded-xl transition-all cursor-pointer border border-slate-200 shadow-2xs"
           >
             Close
           </button>
